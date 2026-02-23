@@ -356,30 +356,35 @@ button{font-family:inherit;cursor:pointer}
 </div>
 
 <script>
+/* ═══════════════════════════════════════════════════════
+   PARAMETERS — edit these freely, logic is below
+═══════════════════════════════════════════════════════ */
 const P = {
   EMA_TOUCH: 0.30, EMA_STOP: 0.50, EMA_TGT: 2.50,
   ORB_CANDLES: 6, ORB_STOP: 0.50, ORB_TGT: 3.00, ORB_WALL_DIST: 1.00,
-  SWEEP_MIN_PREM: 500000,
+  SWEEP_MIN_PREM: 500000,   // $500K+ per your preference
   SWEEP_MIN_COUNT: 2, GEX_DIST: 1.50,
   HVN_PROX: 0.40, HVN_WICK: 0.30,
-  FIB_PROX: 0.50,
+  FIB_PROX: 0.50,   // $ distance to count as Fibonacci confluence (+5% conf boost)
   DELTA_RATIO: 1.30, DELTA_LOOKBACK: 6,
   GEX_FLIP: 584.50, GEX_CWALL: 595.00, GEX_PWALL: 575.00,
-  APEX_MIN: 0,
+  APEX_MIN: 0,          // 0 = all active rules must agree
   APEX_CONF: 82,
   APEX_TGT_MOVE: 4.00, APEX_STOP_BUF: 0.75,
-  APEX_TGT_PCT: 20,
-  APEX_STOP_PCT: 15,
+  APEX_TGT_PCT: 20,     // % target on option position
+  APEX_STOP_PCT: 15,    // % stop on option position
   SMS_APEX: true,
-  SMS_BLOCKER_3X: true,
-  LIVE_MS: 5000,
-  FLOW_MS: 10000,
-  GEX_INTERVAL_MIN: 30,
+  SMS_BLOCKER_3X: true, // text when same rule blocks 3x in one day
+  LIVE_MS: 5000,        // 5s refresh (paid Polygon); use 15000 on free
+  FLOW_MS: 10000,       // Unusual Whales poll interval
+  GEX_INTERVAL_MIN: 30, // GEX refresh interval (minutes)
 };
 
+// ── API KEYS & CONNECTION STATE
 let K = { poly:'', uw:'', sg:'', trad:'', tsid:'', ttok:'', tfrom:'', tto:'' };
 let CON = { poly:false, uw:false, sg:false, trad:false, twilio:false };
 
+// ── APP STATE
 let src='mock', live=false;
 let liveIv=null, flowIv=null, gexIv=null;
 let c5=[], c15=[];
@@ -389,6 +394,7 @@ let sigs=[], orders=[], selSig=null, tab='signals';
 let rules={ ema:true, orb:true, sw:true, hvn:true, dd:true };
 let apexBT=false, lastGEXt=0;
 
+// ── MOCK DATA
 const MOCK_FLOW=[
   {time:'09:32',type:'CALL',strike:590,expiry:'02/27',premium:712000,size:2300,sentiment:'bullish',sweep:true},
   {time:'09:51',type:'PUT', strike:585,expiry:'02/27',premium:521000,size:1700,sentiment:'bearish',sweep:true},
@@ -412,27 +418,31 @@ const getGEX =()=> sgGEX || mockGEX();
 
 function genCandles(base,n,iv){ const c=[]; let p=base,now=Date.now(); for(let i=n;i>=0;i--){const o=p,ch=(Math.random()-.48)*1.8,cl=Math.max(o+ch,base*.95); c.push({t:now-i*iv*1000,o,h:Math.max(o,cl)+Math.random()*.5,l:Math.min(o,cl)-Math.random()*.5,c:cl,v:Math.floor(700000+Math.random()*500000)}); p=cl;} return c; }
 
+// ── MATH
 function ema(cs,n){const k=2/(n+1);let e=cs[0].c;return cs.map((c,i)=>({t:c.t,v:i?e=c.c*k+e*(1-k):e}));}
 function vwap(cs){let tv=0,vv=0;return cs.map(c=>{const tp=(c.h+c.l+c.c)/3;tv+=tp*c.v;vv+=c.v;return{t:c.t,v:tv/vv}});}
 function hvn(cs){const bs=0.25,b={};cs.forEach(c=>{const lo=Math.floor(c.l/bs)*bs,hi=Math.ceil(c.h/bs)*bs;for(let p=lo;p<=hi;p=parseFloat((p+bs).toFixed(2)))b[p]=(b[p]||0)+c.v});return Object.entries(b).map(([p,v])=>({price:+p,vol:v})).sort((a,z)=>z.vol-a.vol).slice(0,6).map(n=>n.price);}
 function orb(cs){const o=cs.slice(0,P.ORB_CANDLES);if(o.length<P.ORB_CANDLES)return null;const h=Math.max(...o.map(c=>c.h)),l=Math.min(...o.map(c=>c.l));return{high:h,low:l,mid:(h+l)/2};}
 function delta(cs,fl){const r=cs.slice(-P.DELTA_LOOKBACK),up=r.at(-1).c>r[0].c,dn=r.at(-1).c<r[0].c,cd=fl.filter(f=>f.type==='CALL').reduce((a,b)=>a+b.premium,0),pd=fl.filter(f=>f.type==='PUT').reduce((a,b)=>a+b.premium,0);return{bull:dn&&cd>pd*P.DELTA_RATIO,bear:up&&pd>cd*P.DELTA_RATIO,cd,pd};}
 function fibs(cs){
+  // Find the most significant swing high & low over the last 40 5m candles
   const lookback=cs.slice(-40);
   const hi=Math.max(...lookback.map(c=>c.h)), lo=Math.min(...lookback.map(c=>c.l)), rng=hi-lo;
+  // Key retracement levels from both directions
   return [
-    lo+rng*0.382, lo+rng*0.500, lo+rng*0.618,
-    hi-rng*0.382, hi-rng*0.500, hi-rng*0.618,
+    lo+rng*0.382, lo+rng*0.500, lo+rng*0.618, // retracements up
+    hi-rng*0.382, hi-rng*0.500, hi-rng*0.618, // retracements down
   ];
 }
 function nearFib(fibLevels, p){ return fibLevels.some(f=>Math.abs(p-f)<P.FIB_PROX); }
 
+// ── SIGNAL ENGINE
 function detectSigs(c5,c15,fl,gx){
   if(c5.length<22)return[];
   const sig=[],e8=ema(c5,8),e21=ema(c5,21),e8b=ema(c15,8),e21b=ema(c15,21);
   const vw=vwap(c5),hvns=hvn(c5),ob=orb(c5),dlt=delta(c5,fl);
   const fibLvls=fibs(c5);
-  const fib=(p)=>nearFib(fibLvls,p)?5:0;
+  const fib=(p)=>nearFib(fibLvls,p)?5:0; // returns +5 conf boost if near a fib level
   const L=c5.at(-1),Pv=c5.at(-2),L15=c15.at(-1);
   const e8v=e8.at(-1).v,e21v=e21.at(-1).v,e8bv=e8b.at(-1).v,e21bv=e21b.at(-1).v,vwv=vw.at(-1).v;
   const bsw=fl.filter(f=>f.type==='CALL'&&f.sweep).length,psw=fl.filter(f=>f.type==='PUT'&&f.sweep).length;
@@ -441,6 +451,7 @@ function detectSigs(c5,c15,fl,gx){
   const now=new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
   const push=(s)=>sig.push(s);
 
+  // 1. EMA RETEST
   if(rules.ema){
     const tb=Math.abs(L.l-e8v)<P.EMA_TOUCH||(Pv.l<e8v&&L.c>e8v);
     const ts=Math.abs(L.h-e8v)<P.EMA_TOUCH||(Pv.h>e8v&&L.c<e8v);
@@ -449,6 +460,7 @@ function detectSigs(c5,c15,fl,gx){
     if(tb&&ab&&abFlip&&abVwap&&bias!=='bearish') push({id:Date.now()+1,type:'CALL',rule:'8 EMA Retest',detail:`Bounce off 8 EMA (${e8v.toFixed(2)}) · 15m bullish stack · Above VWAP${nh?' · HVN':''}${fib(L.c)?' · Fib':''}`,filters:['15m aligned','Above VWAP','Above flip',...(nh?['HVN node']:[]),...(fib(L.c)?['Fib confluence']:[])],conf:78+hb+fib(L.c)+~~(Math.random()*8),price:L.c,target:L.c+P.EMA_TGT,stop:e21v-P.EMA_STOP,strike:Math.round(L.c),expiry:'02/27',time:now});
     if(ts&&as2&&!abFlip&&!abVwap&&bias!=='bullish') push({id:Date.now()+2,type:'PUT',rule:'8 EMA Retest',detail:`Rejection at 8 EMA (${e8v.toFixed(2)}) · 15m bearish stack · Below VWAP${nh?' · HVN':''}${fib(L.c)?' · Fib':''}`,filters:['15m aligned','Below VWAP','Below flip',...(nh?['HVN node']:[]),...(fib(L.c)?['Fib confluence']:[])],conf:74+hb+fib(L.c)+~~(Math.random()*8),price:L.c,target:L.c-P.EMA_TGT,stop:e21v+P.EMA_STOP,strike:Math.round(L.c),expiry:'02/27',time:now});
   }
+  // 2. ORB
   if(rules.orb&&ob){
     const bo=Pv.c<=ob.high&&L.c>ob.high&&abVwap, bd=Pv.c>=ob.low&&L.c<ob.low&&!abVwap;
     const nCW=gx.keyLevels.some(l=>l.type==='call wall'&&Math.abs(L.c-l.price)<P.ORB_WALL_DIST);
@@ -457,6 +469,7 @@ function detectSigs(c5,c15,fl,gx){
     if(bo&&nCW) push({id:Date.now()+31,type:'PUT',rule:'ORB Fade (Call Wall)',detail:`ORB breakout ran into call wall → fade${fib(L.c)?' · Fib':''}`,filters:['ORB break','Call wall reject',...(fib(L.c)?['Fib confluence']:[])],conf:72+fib(L.c)+~~(Math.random()*10),price:L.c,target:ob.mid,stop:L.c+1.0,strike:Math.round(L.c),expiry:'02/27',time:now});
     if(bd&&!nPW&&!abFlip) push({id:Date.now()+4,type:'PUT',rule:'ORB Breakdown',detail:`Below 30m ORB low (${ob.low.toFixed(2)}) · VWAP confirmed · Below flip${fib(L.c)?' · Fib':''}`,filters:['ORB confirmed','Below VWAP','Below flip',...(fib(L.c)?['Fib confluence']:[])],conf:78+fib(L.c)+~~(Math.random()*12),price:L.c,target:L.c-P.ORB_TGT,stop:ob.low+P.ORB_STOP,strike:Math.round(L.c),expiry:'02/27',time:now});
   }
+  // 3. SWEEP + GEX
   if(rules.sw){
     const sw=fl.filter(f=>f.sweep&&f.premium>=P.SWEEP_MIN_PREM);
     const bb=sw.filter(f=>f.type==='CALL').length>=P.SWEEP_MIN_COUNT;
@@ -465,19 +478,21 @@ function detectSigs(c5,c15,fl,gx){
     if(bb&&nl&&abFlip&&abVwap) push({id:Date.now()+5,type:'CALL',rule:'Sweep + GEX Confluence',detail:`${P.SWEEP_MIN_COUNT}+ call sweeps >$${P.SWEEP_MIN_PREM/1000}K at GEX level · Above VWAP${fib(L.c)?' · Fib':''}`,filters:['$500K+ sweeps','GEX level','Above VWAP',...(fib(L.c)?['Fib confluence']:[])],conf:85+fib(L.c)+~~(Math.random()*10),price:L.c,target:L.c+3,stop:L.c-1.5,strike:Math.round(L.c),expiry:'02/27',time:now});
     if(bp&&nl&&!abFlip&&!abVwap) push({id:Date.now()+6,type:'PUT',rule:'Sweep + GEX Confluence',detail:`${P.SWEEP_MIN_COUNT}+ put sweeps >$${P.SWEEP_MIN_PREM/1000}K at GEX level · Below VWAP${fib(L.c)?' · Fib':''}`,filters:['$500K+ sweeps','GEX level','Below VWAP',...(fib(L.c)?['Fib confluence']:[])],conf:83+fib(L.c)+~~(Math.random()*10),price:L.c,target:L.c-3,stop:L.c+1.5,strike:Math.round(L.c),expiry:'02/27',time:now});
   }
+  // 4. HVN
   if(rules.hvn){
     const nh=hvns.find(h=>Math.abs(L.c-h)<P.HVN_PROX);
     if(nh&&Math.abs(L.h-nh)<P.HVN_WICK&&L.c<L.o&&!abVwap&&bias!=='bullish') push({id:Date.now()+7,type:'PUT',rule:'HVN Rejection',detail:`Rejected at HVN (${nh.toFixed(2)}) · Bearish close · Below VWAP${fib(L.c)?' · Fib':''}`,filters:['HVN level','Bearish close','Below VWAP',...(fib(L.c)?['Fib confluence']:[])],conf:73+fib(L.c)+~~(Math.random()*10),price:L.c,target:L.c-2,stop:nh+.5,strike:Math.round(L.c),expiry:'02/27',time:now});
     if(nh&&Math.abs(L.l-nh)<P.HVN_WICK&&L.c>L.o&&abVwap&&bias!=='bearish') push({id:Date.now()+8,type:'CALL',rule:'HVN Support Hold',detail:`Held HVN support (${nh.toFixed(2)}) · Bullish reclaim · Above VWAP${fib(L.c)?' · Fib':''}`,filters:['HVN level','Bullish close','Above VWAP',...(fib(L.c)?['Fib confluence']:[])],conf:75+fib(L.c)+~~(Math.random()*10),price:L.c,target:L.c+2,stop:nh-.5,strike:Math.round(L.c),expiry:'02/27',time:now});
   }
+  // 5. DELTA DIVERGENCE
   if(rules.dd){
-    const dlt2=delta(c5,fl);
-    if(dlt2.bull) push({id:Date.now()+9,type:'CALL',rule:'Delta Divergence',detail:`Price falling but $${(dlt2.cd/1000).toFixed(0)}K calls vs $${(dlt2.pd/1000).toFixed(0)}K puts · Smart money loading${fib(L.c)?' · Fib':''}`,filters:['Divergence','Call accumulation',...(fib(L.c)?['Fib confluence']:[])],conf:70+fib(L.c)+~~(Math.random()*12),price:L.c,target:L.c+2.5,stop:L.c-1,strike:Math.round(L.c),expiry:'02/27',time:now});
-    if(dlt2.bear) push({id:Date.now()+10,type:'PUT',rule:'Delta Divergence',detail:`Price rising but $${(dlt2.pd/1000).toFixed(0)}K puts vs $${(dlt2.cd/1000).toFixed(0)}K calls · Distribution${fib(L.c)?' · Fib':''}`,filters:['Divergence','Put accumulation',...(fib(L.c)?['Fib confluence']:[])],conf:70+fib(L.c)+~~(Math.random()*12),price:L.c,target:L.c-2.5,stop:L.c+1,strike:Math.round(L.c),expiry:'02/27',time:now});
+    if(dlt.bull) push({id:Date.now()+9,type:'CALL',rule:'Delta Divergence',detail:`Price falling but $${(dlt.cd/1000).toFixed(0)}K calls vs $${(dlt.pd/1000).toFixed(0)}K puts · Smart money loading${fib(L.c)?' · Fib':''}`,filters:['Divergence','Call accumulation',...(fib(L.c)?['Fib confluence']:[])],conf:70+fib(L.c)+~~(Math.random()*12),price:L.c,target:L.c+2.5,stop:L.c-1,strike:Math.round(L.c),expiry:'02/27',time:now});
+    if(dlt.bear) push({id:Date.now()+10,type:'PUT',rule:'Delta Divergence',detail:`Price rising but $${(dlt.pd/1000).toFixed(0)}K puts vs $${(dlt.cd/1000).toFixed(0)}K calls · Distribution${fib(L.c)?' · Fib':''}`,filters:['Divergence','Put accumulation',...(fib(L.c)?['Fib confluence']:[])],conf:70+fib(L.c)+~~(Math.random()*12),price:L.c,target:L.c-2.5,stop:L.c+1,strike:Math.round(L.c),expiry:'02/27',time:now});
   }
   return sig;
 }
 
+// ── APEX
 function detectApex(sg){
   const active=Object.values(rules).filter(Boolean).length;
   const min=P.APEX_MIN===0?active:P.APEX_MIN;
@@ -498,6 +513,11 @@ function detectApex(sg){
   return best;
 }
 
+// ══════════════════════════════════════════
+//  API INTEGRATIONS
+// ══════════════════════════════════════════
+
+// POLYGON
 function tradingDate(){const n=new Date(),d=n.getDay(),dt=new Date(n);dt.setDate(dt.getDate()-(d===6?1:d===0?2:0));return dt.toISOString().split('T')[0];}
 function isMarket(){const et=new Date(new Date().toLocaleString('en-US',{timeZone:'America/New_York'})),d=et.getDay(),m=et.getHours()*60+et.getMinutes();return d>=1&&d<=5&&m>=570&&m<960;}
 async function polyGet(path){const r=await fetch(`https://api.polygon.io${path}${path.includes('?')?'&':'?'}apiKey=${K.poly}`);const d=await r.json();if(d.status==='ERROR'||d.status==='FORBIDDEN')throw new Error(d.error||'Polygon error');return d;}
@@ -518,16 +538,17 @@ async function fetchPolygon(){
   src='live';
 }
 
+// UNUSUAL WHALES — $500K+ live flow
 async function fetchUW(){
   if(!K.uw) return;
   try{
-    const res=await fetch('https://api.unusualwhales.com/api/option-trades?ticker=SPY&limit=100',{headers:{'Authorization':`Bearer ${K.uw}`}});
+    const res=await fetch('https://api.unusualwhales.com/api/option-trades/flow-alerts?ticker=SPY&limit=100',{headers:{'Authorization':`Bearer ${K.uw}`,'Accept':'application/json'}});
     if(!res.ok) throw new Error(`UW ${res.status}`);
-    const d=await res.json(), trades=d.data||d.trades||d||[];
+    const d=await res.json(), trades=d.data||d||[];
     uwFlow=trades.map(t=>{
-      const ot=(t.option_type||t.type||'').toUpperCase();
-      const type=(ot==='C'||ot==='CALL')?'CALL':'PUT';
-      return{time:new Date(t.filled_at||t.created_at||Date.now()).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}),type,strike:+t.strike||+t.strike_price||0,expiry:t.expiry||t.expires||'',premium:+t.premium||+t.total_premium||0,size:+t.size||+t.volume||0,sentiment:type==='CALL'?'bullish':'bearish',sweep:!!(t.is_sweep||t.sweep||false)};
+      const ot=(t.type||'').toLowerCase();
+      const type=(ot==='call')?'CALL':'PUT';
+      return{time:new Date(t.created_at||Date.now()).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}),type,strike:+t.strike||0,expiry:t.expiry||'',premium:+t.total_premium||0,size:+t.total_size||+t.volume||0,sentiment:type==='CALL'?'bullish':'bearish',sweep:!!(t.has_sweep||false)};
     }).filter(t=>t.premium>=P.SWEEP_MIN_PREM);
     CON.uw=true;
     setBadge('flow-src','UNUSUAL WHALES LIVE','#10b98122','#10b981','#10b98144');
@@ -536,6 +557,7 @@ async function fetchUW(){
   }catch(e){console.warn('UW:',e.message);}
 }
 
+// UNUSUAL WHALES GEX — every 30 min (spot-exposures endpoint, updates every 1 min intraday)
 async function fetchUWGex(force=false){
   if(!K.uw) return;
   if(!force && Date.now()-lastGEXt < P.GEX_INTERVAL_MIN*60000) return;
@@ -545,23 +567,29 @@ async function fetchUWGex(force=false){
     if(!res.ok) throw new Error(`UW GEX ${res.status}`);
     const json=await res.json();
     const rows=(json.data||json||[]);
+    // Aggregate net GEX per strike across all expiries
     const byStrike={};
     for(const r of rows){
       const strike=+(r.strike||r.strike_price||0);
       if(!strike) continue;
+      // Confirmed field names from UW API response: call_gamma_oi (positive) + put_gamma_oi (negative)
       const netGex=(+(r.call_gamma_oi)||0)+(+(r.put_gamma_oi)||0);
       byStrike[strike]=(byStrike[strike]||0)+netGex;
     }
     const strikes=Object.keys(byStrike).map(Number).sort((a,b)=>a-b);
     if(strikes.length<3) throw new Error('UW GEX: insufficient data');
+    // Call wall = strike with highest positive net GEX
     const cwall=strikes.reduce((best,s)=>byStrike[s]>byStrike[best]?s:best,strikes[0]);
+    // Put wall = strike with highest negative net GEX
     const pwall=strikes.reduce((best,s)=>byStrike[s]<byStrike[best]?s:best,strikes[0]);
+    // Flip level = strike where cumulative net GEX crosses from negative to positive
     let cumGex=0, flip=strikes[Math.floor(strikes.length/2)];
     for(let i=0;i<strikes.length;i++){
       const prev=cumGex;
       cumGex+=byStrike[strikes[i]];
       if(prev<0 && cumGex>=0){ flip=strikes[i]; break; }
     }
+    // Sanity check — values should be within 10% of current price
     const spyP=price||P.GEX_FLIP;
     const safeFlip=(flip>spyP*0.9&&flip<spyP*1.1)?flip:P.GEX_FLIP;
     const safeCwall=(cwall>safeFlip)?cwall:P.GEX_CWALL;
@@ -578,6 +606,7 @@ async function fetchUWGex(force=false){
     renderGEX(); updateDots();
   }catch(e){console.warn('UW GEX:',e.message);}
 }
+// Keep fetchSG as alias so any stray references don’t break
 const fetchSG=fetchUWGex;
 
 function applyManualGEX(){
@@ -594,6 +623,7 @@ function applyManualGEX(){
   renderGEX();
 }
 
+// TRADIER — real options chain for backtest P&L
 async function tradierChain(expiry){
   if(!K.trad) return null;
   try{
@@ -608,6 +638,7 @@ async function tradierMid(dir,strike,expiry){
   return opt?((opt.bid+opt.ask)/2):null;
 }
 
+// TWILIO SMS
 async function sendSMS(body){
   if(!K.tsid||!K.ttok||!K.tfrom||!K.tto) return false;
   try{
@@ -644,6 +675,9 @@ function sendSummSMS(){
   sendSMS(txt).then(ok=>ok?alert('Summary sent ✓'):alert('SMS failed — check Twilio keys'));
 }
 
+// ══════════════════════════════════════════
+//  CONNECT / LAUNCH
+// ══════════════════════════════════════════
 async function connectAll(){
   const btn=document.getElementById('connect-btn');
   btn.textContent='VALIDATING...'; btn.disabled=true; setErr('');
@@ -688,6 +722,9 @@ function disconnect(){
   document.getElementById('connect-btn').disabled=false;
 }
 
+// ══════════════════════════════════════════
+//  MAIN LOOP
+// ══════════════════════════════════════════
 async function refresh(){
   if(src==='live'&&K.poly){try{await fetchPolygon();}catch(e){showErr(e.message);}fetchUWGex();}
   else{price=parseFloat((price+(Math.random()-.49)*.15).toFixed(2));chg=parseFloat((price-584).toFixed(2));}
@@ -703,6 +740,9 @@ function toggleLive(){
   if(live){refresh();liveIv=setInterval(refresh,P.LIVE_MS);}else clearInterval(liveIv);
 }
 
+// ══════════════════════════════════════════
+//  RENDER
+// ══════════════════════════════════════════
 function updateHeader(){
   document.getElementById('hdr-price').textContent=`$${price.toFixed(2)}`;
   const c=document.getElementById('hdr-change');c.textContent=`${chg>=0?'▲':'▼'} ${Math.abs(chg).toFixed(2)} (${(Math.abs(chg)/price*100).toFixed(2)}%)`;c.style.color=chg>=0?'#10b981':'#ef4444';
@@ -736,6 +776,7 @@ function updateDots(){
 }
 function setBadge(id,txt,bg,col,border){const el=document.getElementById(id);if(!el)return;el.textContent=txt;el.style.background=bg;el.style.color=col;el.style.borderColor=border;}
 
+// ── SCAN
 function scanSignals(){
   const fl=getFlow(),gx=getGEX();
   const newSigs=detectSigs(c5,c15,fl,gx);
@@ -815,6 +856,7 @@ function renderSigs(){
   }).join('');
 }
 
+// ── FLOW
 function renderFlow(){
   const fl=getFlow();
   const cp=fl.filter(f=>f.type==='CALL').reduce((a,b)=>a+b.premium,0);
@@ -834,6 +876,7 @@ function renderFlow(){
   </div>`).join('');
 }
 
+// ── GEX
 function renderGEX(){
   const gx=getGEX(),af=price>gx.flipLevel;
   document.getElementById('gex-regime').textContent=af?'POSITIVE GEX':'NEGATIVE GEX';
@@ -858,6 +901,7 @@ function renderGEX(){
   ].map(d=>`<div style="display:flex;justify-content:space-between;margin-bottom:8px;font-size:12px"><span style="color:#64748b">${d.l}</span><span style="color:${d.up?'#10b981':'#ef4444'};font-weight:700">$${Math.abs(d.v).toFixed(2)}</span></div>`).join('');
 }
 
+// ── BACKTEST
 let apexBTMode=false;
 function toggleApexBT(){
   apexBTMode=!apexBTMode;
@@ -919,6 +963,7 @@ async function runBacktest(){
   },1400);
 }
 
+// ── ORDERS
 function stageOrder(id){selSig=sigs.find(s=>s.id===id);if(!selSig)return;showOrderForm();switchTab('orders');}
 function showOrderForm(){
   const s=selSig,iC=s.type==='CALL',col=iC?'#10b981':'#ef4444';
@@ -960,6 +1005,9 @@ function renderOrders(){
   </div>`}).join('');
 }
 
+// ══════════════════════════════════════════
+//  EVENING SUMMARY & APEX LOGGING
+// ══════════════════════════════════════════
 const LOGKEY='spyedge_apex_v2';
 function todayKey(){return tradingDate();}
 function loadLog(){try{return JSON.parse(localStorage.getItem(LOGKEY)||'{}')}catch{return{}}}
@@ -1110,6 +1158,7 @@ function buildExec(date,fires,blocks,wins,losses,scratches,open,wr,pnl,fps,bls){
   return ln.join('\n');
 }
 
+// ── SETTINGS MODAL
 function openSettings(){
   document.getElementById('settings-modal').style.display='flex';
   document.getElementById('settings-body').innerHTML=`
@@ -1130,6 +1179,7 @@ function openSettings(){
 }
 function closeSettings(){document.getElementById('settings-modal').style.display='none';}
 
+// ── TAB SWITCHING
 function switchTab(name){
   ['signals','flow','gex','backtest','orders','summary'].forEach(t=>{
     document.getElementById(`pane-${t}`).style.display=t===name?'block':'none';
@@ -1141,12 +1191,14 @@ function switchTab(name){
   if(name==='summary') renderSummary();
 }
 
+// ── RULE TOGGLES
 function toggleRule(key){
   rules[key]=!rules[key];
   const t=document.getElementById(`tog-${key}`),th=t.querySelector('.tog-thumb'),lbl=document.getElementById(`tlbl-${key}`);
   t.style.background=rules[key]?'#10b981':'#1e293b'; th.style.left=rules[key]?'18px':'2px'; lbl.style.color=rules[key]?'#e2e8f0':'#475569';
 }
 
+// ── INIT
 window.addEventListener('keydown',e=>{if(e.key==='Enter'&&document.getElementById('setup-screen').style.display!=='none')connectAll();});
 (async()=>{
   const saved=sessionStorage.getItem('sek');
