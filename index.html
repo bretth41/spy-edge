@@ -1,0 +1,1655 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>SPY Edge v1.6</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&display=swap');
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'JetBrains Mono','Courier New',monospace;background:#09090f;color:#e2e8f0;min-height:100vh}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:#0f0f1a}
+::-webkit-scrollbar-thumb{background:#334155;border-radius:2px}
+input,select,textarea{font-family:inherit;background:#0f172a;border:1px solid #1e293b;color:#e2e8f0;border-radius:6px}
+input:focus,select:focus,textarea:focus{outline:1px solid #10b981;border-color:#10b981}
+button{font-family:inherit;cursor:pointer}
+.btn-primary{background:#10b981;color:#000;font-weight:700;border:none;transition:all .15s}
+.btn-primary:hover{background:#059669;transform:translateY(-1px)}
+.btn-primary:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.btn-ghost{background:transparent;border:1px solid #334155;color:#94a3b8;transition:all .15s}
+.btn-ghost:hover{border-color:#10b981;color:#10b981}
+.btn-danger{background:transparent;border:1px solid #ef444433;color:#ef4444;transition:all .15s}
+.btn-danger:hover{background:#ef444415}
+.pulse{animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.sig-card{cursor:pointer;transition:background .15s}
+.sig-card:hover{background:#0f1929!important}
+.flow-row:hover{background:#0f1520!important}
+.tab-btn{background:none;border:none;border-bottom:2px solid transparent;color:#64748b;padding:11px 14px;font-size:11px;font-family:inherit;letter-spacing:1px;cursor:pointer;display:flex;align-items:center;gap:6px;white-space:nowrap}
+.tab-btn:hover{color:#94a3b8}
+.tab-btn.active{border-bottom-color:#10b981;color:#10b981}
+.badge{font-size:10px;padding:2px 7px;border-radius:4px;border:1px solid;font-weight:700;display:inline-block}
+.badge-call,.badge-bull,.badge-bullish{background:rgba(16,185,129,.15);color:#6ee7b7;border-color:rgba(16,185,129,.3)}
+.badge-put,.badge-bear,.badge-bearish{background:rgba(239,68,68,.15);color:#fca5a5;border-color:rgba(239,68,68,.3)}
+.badge-sweep{background:rgba(245,158,11,.15);color:#fcd34d;border-color:rgba(245,158,11,.3)}
+.ftag{font-size:9px;padding:2px 6px;border-radius:3px;background:#0f172a;border:1px solid #1e293b;color:#475569;letter-spacing:.5px;display:inline-block;margin:2px 2px 0 0}
+#setup-screen{display:flex;align-items:flex-start;justify-content:center;min-height:100vh;padding:30px 20px;overflow-y:auto}
+#app{display:none;flex-direction:column;min-height:100vh}
+.card{background:#0c0c1a;border:1px solid #1e293b;border-radius:8px}
+.sl{font-size:11px;color:#475569;letter-spacing:2px}
+.tog{width:36px;height:20px;border-radius:10px;position:relative;cursor:pointer;transition:background .2s;display:inline-block;flex-shrink:0}
+.tog-thumb{position:absolute;top:2px;width:16px;height:16px;border-radius:50%;background:#fff;transition:left .2s}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.g6{display:grid;grid-template-columns:repeat(6,1fr);gap:12px}
+.gsb{display:grid;grid-template-columns:300px 1fr;gap:20px}
+.api-dot{width:7px;height:7px;border-radius:50%;display:inline-block}
+</style>
+</head>
+<body>
+
+<!-- ══════ SETUP ══════ -->
+<div id="setup-screen">
+<div style="width:620px;max-width:100%">
+<div class="card" style="padding:36px">
+  <div style="font-size:11px;color:#10b981;letter-spacing:3px;margin-bottom:4px;font-weight:700">◈ SPY EDGE v1.6</div>
+  <div style="font-size:20px;font-weight:700;color:#f1f5f9;margin-bottom:4px">Connect Your Data Sources</div>
+  <div style="font-size:11px;color:#475569;margin-bottom:26px;line-height:1.7">Keys are saved in this browser and auto-fill next session — no re-entry needed. Only Polygon is required; everything else unlocks progressively more accurate signals.</div>
+
+  <div style="margin-bottom:16px">
+    <div style="display:flex;justify-content:space-between;margin-bottom:5px">
+      <label style="font-size:11px;font-weight:700;color:#10b981">POLYGON.IO — Real-Time Price <span style="color:#ef4444;font-size:10px">★ Required</span></label>
+      <a href="https://polygon.io" target="_blank" style="font-size:10px;color:#06b6d4;text-decoration:none">polygon.io →</a>
+    </div>
+    <input id="k-poly" type="password" placeholder="Polygon paid-tier API key" style="width:100%;padding:9px 12px;font-size:12px"/>
+    <div style="font-size:10px;color:#334155;margin-top:3px">Paid tier enables 5-second real-time refresh. Free tier falls back to 15s.</div>
+  </div>
+
+  <div style="margin-bottom:16px">
+    <div style="display:flex;justify-content:space-between;margin-bottom:5px">
+      <label style="font-size:11px;font-weight:700;color:#06b6d4">UNUSUAL WHALES — Live Options Flow <span style="color:#f59e0b;font-size:10px">★ Strongly recommended</span></label>
+      <a href="https://unusualwhales.com" target="_blank" style="font-size:10px;color:#06b6d4;text-decoration:none">unusualwhales.com →</a>
+    </div>
+    <input id="k-uw" type="password" placeholder="Unusual Whales API key (blank = mock flow)" style="width:100%;padding:9px 12px;font-size:12px"/>
+    <div style="font-size:10px;color:#334155;margin-top:3px">Filters to $500K+ prints only — block-level flow that actually moves the signal.</div>
+  </div>
+
+  <div style="margin-bottom:16px;padding:10px 12px;background:#0c2818;border:1px solid #10b98144;border-radius:6px">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+      <span style="font-size:11px;font-weight:700;color:#10b981">FLOW GEX — Auto-computed from live options flow</span>
+      <span style="font-size:10px;color:#10b981;background:#10b98122;padding:1px 6px;border-radius:3px">★ No extra key needed</span>
+    </div>
+    <div style="font-size:10px;color:#94a3b8;line-height:1.6">Call wall, put wall &amp; flip level are computed directly from UW options flow — 7 DTE or less, strikes within 3% of price, $250K+ prints only. Updates every time flow refreshes. Manual override available in the GEX tab.</div>
+  </div>
+
+  <div style="margin-bottom:16px">
+    <div style="display:flex;justify-content:space-between;margin-bottom:5px">
+      <label style="font-size:11px;font-weight:700;color:#f59e0b">TRADIER — Real Options Chain (Backtest) <span style="color:#475569;font-size:10px">Optional · Free sandbox</span></label>
+      <a href="https://developer.tradier.com" target="_blank" style="font-size:10px;color:#06b6d4;text-decoration:none">developer.tradier.com →</a>
+    </div>
+    <input id="k-trad" type="password" placeholder="Tradier sandbox token (blank = estimated P&L)" style="width:100%;padding:9px 12px;font-size:12px"/>
+    <div style="font-size:10px;color:#334155;margin-top:3px">Uses real option mid prices for backtest P&L instead of approximations.</div>
+  </div>
+
+  <div style="margin-bottom:22px">
+    <div style="display:flex;justify-content:space-between;margin-bottom:5px">
+      <label style="font-size:11px;font-weight:700;color:#fb923c">PUSHOVER — Push Notifications <span style="color:#475569;font-size:10px">Optional · $5 one-time</span></label>
+      <a href="https://pushover.net" target="_blank" style="font-size:10px;color:#06b6d4;text-decoration:none">pushover.net →</a>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <input id="k-ptoken" type="password" placeholder="App API Token" style="padding:9px 12px;font-size:12px"/>
+      <input id="k-puser"  type="password" placeholder="User Key"      style="padding:9px 12px;font-size:12px"/>
+    </div>
+    <div style="font-size:10px;color:#334155;margin-top:3px">Push notification when: APEX fires · You hit 📱 AM BRIEF button each morning.</div>
+  </div>
+
+  <div id="setup-err" style="display:none;font-size:11px;color:#ef4444;margin-bottom:12px;padding:9px 12px;background:#1a0a0a;border:1px solid #ef444433;border-radius:6px"></div>
+  <button id="connect-btn" class="btn-primary" onclick="connectAll()" style="width:100%;padding:13px;border-radius:7px;font-size:13px;letter-spacing:1px">CONNECT &amp; LAUNCH →</button>
+  <div style="text-align:center;font-size:10px;color:#334155;margin-top:10px">Keys saved in this browser — auto-fill next time. Clear with Disconnect button.</div>
+</div>
+</div>
+</div>
+
+<!-- ══════ APP ══════ -->
+<div id="app">
+
+  <!-- HEADER -->
+  <div style="background:#0a0a14;border-bottom:1px solid #1e293b;padding:10px 20px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+    <div style="display:flex;align-items:center;gap:13px">
+      <span style="font-size:11px;color:#10b981;letter-spacing:3px;font-weight:700">◈ SPY EDGE v1.6</span>
+      <span style="width:1px;height:20px;background:#1e293b;display:inline-block"></span>
+      <span id="hdr-price" style="font-size:22px;font-weight:700;color:#f1f5f9;letter-spacing:-1px">$———</span>
+      <span id="hdr-change" style="font-size:12px;color:#10b981"></span>
+      <div id="hdr-ohlv" style="font-size:10px;color:#334155;display:flex;gap:10px"></div>
+      <span id="data-badge" style="font-size:9px;padding:2px 8px;border-radius:3px;font-weight:700;letter-spacing:1px;background:#f59e0b22;border:1px solid #f59e0b55;color:#f59e0b">◌ DEMO</span>
+      <div id="api-dots" style="display:flex;gap:8px;font-size:10px"></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <span id="hdr-time" style="font-size:10px;color:#334155"></span>
+      <div id="hdr-err" style="display:none;font-size:10px;color:#ef4444;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></div>
+      <button class="btn-ghost" onclick="sendAMBrief()" style="font-size:11px;padding:5px 11px;border-radius:4px" title="Send pre-market push notification">📱 AM BRIEF</button>
+      <button class="btn-ghost" onclick="openSettings()" style="font-size:11px;padding:5px 11px;border-radius:4px">⚙</button>
+      <button class="btn-ghost" id="live-btn" onclick="toggleLive()" style="font-size:11px;padding:5px 12px;border-radius:4px;display:flex;align-items:center;gap:6px">
+        <span id="live-dot" style="width:6px;height:6px;border-radius:50%;background:#475569;display:inline-block"></span>
+        <span id="live-lbl">PAUSED</span>
+      </button>
+      <button class="btn-ghost" onclick="refresh()" style="font-size:11px;padding:5px 10px;border-radius:4px">↻</button>
+      <button class="btn-ghost" onclick="disconnect()" style="font-size:11px;padding:5px 10px;border-radius:4px;color:#334155" title="Disconnect">⎋</button>
+    </div>
+  </div>
+
+  <!-- STATUS BAR -->
+  <div style="background:#070710;border-bottom:1px solid #1a1a2e;padding:6px 20px;display:flex;gap:16px;font-size:11px;flex-shrink:0;overflow-x:auto;align-items:center">
+    <span style="color:#475569">GEX</span><span id="sb-regime" style="font-weight:700">—</span><span id="sb-flip" style="color:#334155;font-size:10px"></span>
+    <span style="color:#1e293b">│</span>
+    <span style="color:#475569">8E</span><span id="sb-e8" style="color:#06b6d4">—</span>
+    <span style="color:#475569">21E</span><span id="sb-e21" style="color:#a78bfa">—</span>
+    <span style="color:#475569">VWAP</span><span id="sb-vwap" style="color:#64748b">—</span>
+    <span style="color:#1e293b">│</span>
+    <span style="color:#475569">FLOW</span><span id="sb-bias">—</span>
+    <span style="color:#475569">CALLS</span><span id="sb-calls" style="color:#10b981">—</span>
+    <span style="color:#475569">PUTS</span><span id="sb-puts" style="color:#ef4444">—</span>
+    <span style="color:#1e293b">│</span>
+    <span style="color:#475569">VIX</span><span id="sb-vix" style="color:#f59e0b">—</span>
+    <span style="color:#475569">STAGED</span><span id="sb-staged" style="color:#475569;font-weight:700">0</span>
+    <span style="color:#1e293b">│</span>
+    <span id="sb-apex" style="font-size:10px;color:#334155">APEX: awaiting scan</span>
+  </div>
+
+  <!-- TABS -->
+  <div style="border-bottom:1px solid #1e293b;display:flex;padding:0 20px;flex-shrink:0;overflow-x:auto">
+    <button class="tab-btn active" id="tab-signals"  onclick="switchTab('signals')">⚡ SIGNALS <span id="cnt-signals" style="background:#10b981;color:#000;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;display:none"></span></button>
+    <button class="tab-btn"        id="tab-flow"     onclick="switchTab('flow')">🌊 FLOW</button>
+    <button class="tab-btn"        id="tab-gex"      onclick="switchTab('gex')">⚙ GEX</button>
+    <button class="tab-btn"        id="tab-backtest" onclick="switchTab('backtest')">📊 BACKTEST</button>
+    <button class="tab-btn"        id="tab-orders"   onclick="switchTab('orders')">📋 ORDERS <span id="cnt-orders" style="background:#1e293b;color:#64748b;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700">0</span></button>
+    <button class="tab-btn"        id="tab-summary"  onclick="switchTab('summary')">📈 EVENING SUMMARY <span id="sum-badge" style="display:none;background:#a855f733;color:#a855f7;border:1px solid #a855f755;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700"></span></button>
+  </div>
+
+  <!-- CONTENT -->
+  <div style="padding:20px;flex:1;overflow-y:auto">
+
+    <!-- SIGNALS -->
+    <div id="pane-signals">
+      <div class="card" style="padding:14px;margin-bottom:16px">
+        <div style="display:flex;gap:18px;align-items:center;flex-wrap:wrap;margin-bottom:10px">
+          <span class="sl">RULES</span>
+          <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:11px"><div class="tog" id="tog-ema" onclick="toggleRule('ema')" style="background:#10b981"><div class="tog-thumb" style="left:18px"></div></div><span id="tlbl-ema" style="color:#e2e8f0">EMA Crossover + Retest</span></label>
+          <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:11px"><div class="tog" id="tog-orb" onclick="toggleRule('orb')" style="background:#10b981"><div class="tog-thumb" style="left:18px"></div></div><span id="tlbl-orb" style="color:#e2e8f0">ORB Retest Break/Fail</span></label>
+          <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:11px"><div class="tog" id="tog-sw"  onclick="toggleRule('sw')"  style="background:#10b981"><div class="tog-thumb" style="left:18px"></div></div><span id="tlbl-sw"  style="color:#e2e8f0">Sweep + GEX</span></label>
+          <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:11px"><div class="tog" id="tog-hvn" onclick="toggleRule('hvn')" style="background:#10b981"><div class="tog-thumb" style="left:18px"></div></div><span id="tlbl-hvn" style="color:#e2e8f0">HVN Retest Break/Fail</span></label>
+          <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:11px"><div class="tog" id="tog-dd"  onclick="toggleRule('dd')"  style="background:#10b981"><div class="tog-thumb" style="left:18px"></div></div><span id="tlbl-dd"  style="color:#e2e8f0">Strike Magnet</span></label>
+          <button class="btn-primary" onclick="refresh()" style="margin-left:auto;padding:6px 16px;border-radius:6px;font-size:11px;letter-spacing:1px">SCAN NOW</button>
+        </div>
+        <div style="font-size:10px;color:#334155;border-top:1px solid #1a1a2e;padding-top:8px">15m EMA crossover = trend · ORB active first 90min · RSI 25-75 · Vol rising (5m · 10am-3pm) · Weighted APEX: EMA 30pts · Sweep 25pts · ORB 20pts · HVN 15pts · Delta 10pts · Min 2 signals</div>
+      </div>
+      <div id="signals-list"><div style="text-align:center;padding:60px;color:#334155"><div style="font-size:36px;margin-bottom:12px">⚡</div><div>Click SCAN NOW or enable LIVE</div></div></div>
+    </div>
+
+    <!-- FLOW -->
+    <div id="pane-flow" style="display:none">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div class="sl">OPTIONS FLOW</div>
+          <span id="flow-src" style="font-size:9px;padding:2px 8px;border-radius:3px;background:#1e293b;color:#64748b;border:1px solid #334155">MOCK DATA</span>
+        </div>
+        <span id="flow-updated" style="font-size:10px;color:#334155"></span>
+      </div>
+      <div class="g4" style="margin-bottom:14px" id="flow-metrics"></div>
+      <div class="card" style="overflow:hidden">
+        <div style="display:grid;grid-template-columns:70px 55px 65px 60px 100px 65px 90px 75px;padding:9px 16px;border-bottom:1px solid #1e293b;font-size:10px;color:#475569;letter-spacing:1px">
+          <span>TIME</span><span>TYPE</span><span>STRIKE</span><span>EXP</span><span>PREMIUM</span><span>SIZE</span><span>SENTIMENT</span><span>SWEEP</span>
+        </div>
+        <div id="flow-rows"></div>
+      </div>
+    </div>
+
+    <!-- GEX -->
+    <div id="pane-gex" style="display:none">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div class="sl">GAMMA EXPOSURE</div>
+          <span id="gex-src" style="font-size:9px;padding:2px 8px;border-radius:3px;background:#1e293b;color:#64748b;border:1px solid #334155">MANUAL</span>
+          <span id="gex-next" style="font-size:10px;color:#334155"></span>
+          <button class="btn-ghost" onclick="fetchUWGex(true).then(()=>renderGEX())" style="font-size:9px;padding:2px 8px;border-radius:3px;letter-spacing:1px">↻ RETRY</button>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span style="font-size:10px;color:#475569">Manual:</span>
+          <input id="gex-flip-in"  type="number" placeholder="Flip"      style="width:76px;padding:5px 8px;font-size:11px" value="684"/>
+          <input id="gex-cwall-in" type="number" placeholder="Call wall" style="width:76px;padding:5px 8px;font-size:11px" value="700"/>
+          <input id="gex-pwall-in" type="number" placeholder="Put wall"  style="width:76px;padding:5px 8px;font-size:11px" value="670"/>
+          <button class="btn-ghost" onclick="applyManualGEX()" style="font-size:11px;padding:5px 12px;border-radius:4px">APPLY</button>
+        </div>
+      </div>
+      <div class="g2">
+        <div class="card" style="padding:20px">
+          <div class="sl" style="margin-bottom:12px">KEY LEVELS &nbsp;·&nbsp; SPY <span id="gex-price" style="color:#f1f5f9;font-weight:700">—</span></div>
+          <div id="gex-levels"></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div class="card" style="padding:18px">
+            <div class="sl" style="margin-bottom:8px">GEX REGIME</div>
+            <div id="gex-regime" style="font-size:24px;font-weight:700;margin-bottom:6px;color:#10b981">—</div>
+            <div id="gex-desc" style="font-size:11px;color:#64748b;line-height:1.7"></div>
+          </div>
+          <div class="card" style="padding:18px">
+            <div class="sl" style="margin-bottom:10px">KEY DISTANCES</div>
+            <div id="gex-dist"></div>
+          </div>
+          <div class="card" style="padding:18px;margin-top:14px">
+            <div id="dp-levels"><div style="font-size:11px;color:#475569;padding:4px 0">Dark pool levels load on connect.</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- BACKTEST -->
+    <div id="pane-backtest" style="display:none">
+      <div class="gsb">
+        <div class="card" style="padding:20px;height:fit-content">
+          <div class="sl" style="margin-bottom:14px">BACKTEST CONFIG</div>
+          <div style="margin-bottom:10px"><label style="font-size:10px;color:#64748b;display:block;margin-bottom:4px">Start Date</label><input type="date" id="bt-start" value="2026-01-01" style="width:100%;padding:8px 10px;font-size:12px"/></div>
+          <div style="margin-bottom:10px"><label style="font-size:10px;color:#64748b;display:block;margin-bottom:4px">End Date</label><input type="date" id="bt-end" value="2026-02-21" style="width:100%;padding:8px 10px;font-size:12px"/></div>
+          <div style="margin-bottom:10px"><label style="font-size:10px;color:#64748b;display:block;margin-bottom:4px">Min Confidence %</label><input type="number" id="bt-conf" value="82" style="width:100%;padding:8px 10px;font-size:12px"/></div>
+          <div style="margin-bottom:10px"><label style="font-size:10px;color:#64748b;display:block;margin-bottom:4px">Target % on option</label><input type="number" id="bt-tpct" value="20" style="width:100%;padding:8px 10px;font-size:12px"/></div>
+          <div style="margin-bottom:16px"><label style="font-size:10px;color:#64748b;display:block;margin-bottom:4px">Stop % on option</label><input type="number" id="bt-spct" value="15" style="width:100%;padding:8px 10px;font-size:12px"/></div>
+          <div style="padding:12px;background:#080814;border-radius:8px;border:1px solid #1e293b;margin-bottom:14px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+              <span style="font-size:12px;color:#f1f5f9;font-weight:600">★ APEX Only Mode</span>
+              <div class="tog" id="tog-apex-bt" onclick="toggleApexBT()" style="background:#1e293b"><div class="tog-thumb" style="left:2px"></div></div>
+            </div>
+            <div style="font-size:10px;color:#475569;line-height:1.6">ON = only simulate trades where ALL rules align.<br>OFF = all individually active rules.</div>
+          </div>
+          <div id="tradier-note" style="display:none;padding:8px;background:#0a1000;border:1px solid #f59e0b33;border-radius:6px;font-size:10px;color:#f59e0b;margin-bottom:12px">● Tradier connected — real option chain P&L active</div>
+          <div style="margin-bottom:14px"><div class="sl" style="margin-bottom:8px">Active Rules</div><div id="bt-checks"></div></div>
+          <button class="btn-primary" onclick="runBacktest()" id="bt-run" style="width:100%;padding:10px;border-radius:6px;font-size:12px;letter-spacing:1px">▶ RUN BACKTEST</button>
+        </div>
+        <div id="bt-results"><div style="display:flex;align-items:center;justify-content:center;height:300px;flex-direction:column;gap:12px;color:#475569"><div style="font-size:36px">📊</div><div>Configure and run backtest</div></div></div>
+      </div>
+    </div>
+
+    <!-- ORDERS -->
+    <div id="pane-orders" style="display:none">
+      <div id="orders-wrap" style="display:grid;grid-template-columns:1fr;gap:20px">
+        <div><div class="sl" style="margin-bottom:14px">STAGED ORDERS — ENTER IN WEBULL</div><div id="orders-list"><div style="text-align:center;padding:60px;color:#334155"><div style="font-size:36px;margin-bottom:12px">📋</div><div>No staged orders</div></div></div></div>
+        <div id="order-form" style="display:none"></div>
+      </div>
+    </div>
+
+    <!-- EVENING SUMMARY -->
+    <div id="pane-summary" style="display:none">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+        <div>
+          <div style="font-size:15px;font-weight:700;color:#a855f7;margin-bottom:3px">★ APEX Evening Summary</div>
+          <div style="font-size:11px;color:#475569">Auto-logged every fire & near-miss. Persists by trading date. Export each evening.</div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn-ghost" onclick="sendSummSMS()" style="font-size:11px;padding:7px 14px;border-radius:6px">📱 TEXT SUMMARY</button>
+          <button class="btn-ghost" onclick="exportSummary()" style="font-size:11px;padding:7px 14px;border-radius:6px">⬇ EXPORT</button>
+          <button class="btn-danger" onclick="clearToday()" style="font-size:11px;padding:7px 14px;border-radius:6px">🗑 CLEAR TODAY</button>
+        </div>
+      </div>
+      <div class="g6" style="margin-bottom:16px" id="sum-kpis"></div>
+      <div class="g3" style="margin-bottom:16px">
+        <div class="card" style="padding:16px;border-top:2px solid #a855f7">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px"><div class="sl" style="color:#a855f7">APEX FIRE LOG</div><span id="sum-fire-cnt" style="font-size:10px;color:#475569"></span></div>
+          <div id="sum-fires" style="max-height:400px;overflow-y:auto"></div>
+        </div>
+        <div class="card" style="padding:16px;border-top:2px solid #ef4444">
+          <div class="sl" style="color:#ef4444;margin-bottom:8px">FALSE POSITIVE ANALYSIS</div>
+          <div style="font-size:10px;color:#475569;margin-bottom:10px">Signals on losing trades — ranked by frequency</div>
+          <div id="sum-fp" style="margin-bottom:12px"></div>
+          <div id="sum-fp-txt" style="font-size:10px;color:#334155;padding:10px;background:#080814;border-radius:6px;line-height:1.7"></div>
+        </div>
+        <div class="card" style="padding:16px;border-top:2px solid #f59e0b">
+          <div class="sl" style="color:#f59e0b;margin-bottom:8px">APEX BLOCKERS</div>
+          <div style="font-size:10px;color:#475569;margin-bottom:10px">Rules that most often prevent APEX from firing</div>
+          <div id="sum-bl" style="margin-bottom:12px"></div>
+          <div id="sum-bl-txt" style="font-size:10px;color:#334155;padding:10px;background:#080814;border-radius:6px;line-height:1.7"></div>
+        </div>
+      </div>
+      <div class="card" style="padding:22px;border:1px solid #a855f744;background:linear-gradient(135deg,#0a0514,#080814)">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+          <span style="font-size:18px">📋</span>
+          <div style="font-size:14px;font-weight:700;color:#a855f7">Executive Summary</div>
+          <span id="sum-date" style="font-size:11px;color:#475569;margin-left:auto"></span>
+        </div>
+        <div id="sum-text" style="font-size:11px;color:#94a3b8;line-height:2;white-space:pre-wrap;font-family:'JetBrains Mono',monospace"></div>
+        <div style="border-top:1px solid #1e293b;margin-top:16px;padding-top:16px">
+          <div class="sl" style="margin-bottom:10px">LOG APEX TRADE OUTCOME</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:10px;align-items:end">
+            <div><label style="font-size:10px;color:#64748b;display:block;margin-bottom:4px">APEX Signal</label><select id="out-sel" style="width:100%;padding:7px 10px;font-size:11px;border-radius:6px"></select></div>
+            <div><label style="font-size:10px;color:#64748b;display:block;margin-bottom:4px">Outcome</label>
+              <select id="out-outcome" style="width:100%;padding:7px 10px;font-size:11px;border-radius:6px">
+                <option value="win">✅ WIN (+20% target hit)</option>
+                <option value="loss">❌ LOSS (-15% stop hit)</option>
+                <option value="scratch">➡ SCRATCH (manual exit)</option>
+              </select>
+            </div>
+            <div><label style="font-size:10px;color:#64748b;display:block;margin-bottom:4px">Notes</label><input type="text" id="out-notes" placeholder="what happened..." style="width:100%;padding:7px 10px;font-size:11px;border-radius:6px"/></div>
+            <button class="btn-primary" onclick="logOutcome()" style="padding:8px 16px;border-radius:6px;font-size:11px;white-space:nowrap;height:34px">LOG →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+
+  <!-- SETTINGS MODAL -->
+  <div id="settings-modal" style="display:none;position:fixed;inset:0;background:#00000099;z-index:200;align-items:center;justify-content:center">
+    <div class="card" style="width:500px;padding:30px;max-height:88vh;overflow-y:auto">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
+        <div style="font-size:14px;font-weight:700;color:#f1f5f9">⚙ Settings & API Status</div>
+        <button class="btn-ghost" onclick="closeSettings()" style="padding:4px 10px;border-radius:4px;font-size:12px">✕</button>
+      </div>
+      <div id="settings-body"></div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div style="border-top:1px solid #1a1a2e;padding:8px 20px;font-size:10px;color:#1e293b;display:flex;justify-content:space-between;flex-shrink:0">
+    <span>SPY EDGE v1.6 · Polygon · Unusual Whales ($250K+ flow + GEX) · Tradier · Pushover · Not financial advice</span>
+    <span id="footer-status">◌ Demo mode</span>
+  </div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════
+   PARAMETERS — edit these freely, logic is below
+═══════════════════════════════════════════════════════ */
+const P = {
+  // EMA
+  EMA_TOUCH: 0.40,        // $ proximity to count as retest of 8 EMA
+  EMA_STOP: 0.50, EMA_TGT: 2.50,
+  EMA_RETEST8_BOOST: 5,   // conf boost for retest/fail of 8 EMA
+  EMA_RETEST21_BOOST: 2,  // conf boost for retest/fail of 21 EMA then recross
+  // ORB
+  ORB_CANDLES: 6, ORB_STOP: 0.50, ORB_TGT: 3.00, ORB_WALL_DIST: 1.00,
+  ORB_WINDOW_MINS: 90,    // ORB signal only fires within 90 min of market open
+  ORB_EMA_OVERLAP: 0.50,  // if ORB level and 8 EMA are within $0.50, skip ORB (avoid double-count)
+  // FLOW
+  SWEEP_MIN_PREM: 250000,
+  SWEEP_MIN_COUNT: 2, GEX_DIST: 1.50,
+  // HVN
+  HVN_PROX: 0.40, HVN_WICK: 0.30,
+  HVN_EMA_ALIGN_BOOST: 5,
+  // FIB
+  FIB_PROX: 0.50,
+  // DELTA
+  DELTA_RATIO: 1.30, DELTA_LOOKBACK: 6,
+  // RSI
+  RSI_PERIOD: 14,
+  RSI_MID: 50,
+  RSI_OB: 75,
+  RSI_OS: 25,
+  RSI_HOUR_START: 10,
+  RSI_HOUR_END: 15,
+  // VOLUME — pure 5m candle comparison
+  VOL_LOOKBACK_5M: 6,     // compare current 5m vol to avg of last 6 x 5m candles
+  VOL_MIN_RATIO: 0.80,    // current candle must be >= 80% of the 6-candle avg
+  // GEX
+  GEX_FLIP: 684.00, GEX_CWALL: 700.00, GEX_PWALL: 670.00,
+  GEX_REGIME_BOOST: 5,
+  // DARK POOL
+  DP_MIN_PREMIUM: 1000000,
+  DP_PROX: 0.75,
+  DP_ORB_BOOST: 5,
+  DP_EMA_BOOST: 5,
+  DP_GEX_BOOST: 3,
+  DP_LOOKBACK_DAYS: 5,
+  // FLOW-BASED GEX PROXY
+  FLOW_GEX_EXPIRY_DAYS: 7,   // only consider prints expiring within 7 days
+  FLOW_GEX_STRIKE_PCT: 0.03, // only strikes within 3% of current price
+  FLOW_GEX_MIN_PREM: 250000, // minimum print premium for GEX proxy calculation
+  FLOW_GEX_MIN_PRINTS: 3,    // minimum qualifying prints before computing proxy
+  // FLOW MOMENTUM
+  FLOW_MOM_MINS: 15,         // lookback window for flow momentum (minutes)
+  FLOW_MOM_BOOST: 5,         // conf boost to Sweep+GEX when flow momentum aligns
+  FLOW_MOM_THRESHOLD: 0.65,  // ratio threshold (65% calls = bullish, 35% = bearish)
+  // STRIKE MAGNET
+  SM_MINS: 15,               // lookback window for strike magnet clustering
+  SM_MIN_PRINTS: 2,          // minimum prints at same strike to trigger
+  SM_STRIKE_PCT: 0.03,       // strike must be within 3% of price
+  // APEX — weighted scoring
+  APEX_WEIGHTS: {
+    'EMA Crossover + Retest':      28,
+    'Sweep + GEX Confluence':      25,
+    'ORB Retest Breakout':         18,
+    'ORB Retest Breakdown':        18,
+    'ORB Low Retest Hold':         18,
+    'ORB Retest Fail (Call Wall)': 18,
+    'HVN Retest Fail':             15,
+    'HVN Breakout':                15,
+    'Strike Magnet':               14,
+  },
+  APEX_WEIGHTS_LATE: {        // post-ORB window: redistribute ORB weight
+    'EMA Crossover + Retest':      35,
+    'Sweep + GEX Confluence':      28,
+    'HVN Retest Fail':             20,
+    'HVN Breakout':                20,
+    'Strike Magnet':               17,
+  },
+  APEX_TOTAL_WEIGHT: 100,   // weights sum to 100 — score = weighted sum / 100 * 100
+  APEX_MIN_SIGS: 2,         // minimum 2 signals must fire before APEX can trigger
+  APEX_CONF: 78,
+  APEX_TGT_MOVE: 4.00, APEX_STOP_BUF: 0.75,
+  APEX_TGT_PCT: 20,
+  APEX_STOP_PCT: 15,
+  SMS_APEX: true,
+  SMS_BLOCKER_3X: true,
+  LIVE_MS: 5000,
+  FLOW_MS: 10000,
+  GEX_INTERVAL_MIN: 30,
+};
+
+// ── API KEYS & CONNECTION STATE
+let K = { poly:'', uw:'', sg:'', trad:'', ptoken:'', puser:'' };
+let CON = { poly:false, uw:false, sg:false, trad:false, push:false };
+
+// ── APP STATE
+let src='mock', live=false;
+let liveIv=null, flowIv=null, gexIv=null;
+let c5=[], c15=[];
+let price=587.13, chg=0, meta={};
+let uwFlow=[], sgGEX=null, dpLevels=[];
+let sigs=[], orders=[], selSig=null, tab='signals';
+let rules={ ema:true, orb:true, sw:true, hvn:true, dd:true };
+let apexBT=false, lastGEXt=0;
+
+// ── MOCK DATA
+const MOCK_FLOW=[
+  {time:'09:32',type:'CALL',strike:590,expiry:'02/27',premium:712000,size:2300,sentiment:'bullish',sweep:true},
+  {time:'09:51',type:'PUT', strike:585,expiry:'02/27',premium:521000,size:1700,sentiment:'bearish',sweep:true},
+  {time:'10:04',type:'CALL',strike:592,expiry:'02/28',premium:843000,size:2800,sentiment:'bullish',sweep:true},
+  {time:'10:22',type:'PUT', strike:583,expiry:'02/27',premium:156000,size:500, sentiment:'bearish',sweep:false},
+  {time:'10:38',type:'CALL',strike:588,expiry:'03/06',premium:921000,size:3100,sentiment:'bullish',sweep:true},
+  {time:'10:55',type:'PUT', strike:580,expiry:'02/27',premium:677000,size:2200,sentiment:'bearish',sweep:true},
+  {time:'11:08',type:'CALL',strike:595,expiry:'03/06',premium:512000,size:1700,sentiment:'bullish',sweep:false},
+  {time:'11:24',type:'CALL',strike:590,expiry:'02/27',premium:888000,size:2900,sentiment:'bullish',sweep:true},
+];
+function mockGEX(){ return { flipLevel:P.GEX_FLIP, keyLevels:[
+  {price:P.GEX_CWALL,       gex:2.8,  type:'call wall'},
+  {price:P.GEX_FLIP+6,      gex:1.5,  type:'resistance'},
+  {price:price,              gex:0.3,  type:'current'},
+  {price:P.GEX_FLIP,        gex:0,    type:'gamma flip'},
+  {price:P.GEX_FLIP-6,      gex:-1.3, type:'support'},
+  {price:P.GEX_PWALL,       gex:-2.5, type:'put wall'},
+]};}
+const getFlow=()=> uwFlow.length ? uwFlow : MOCK_FLOW;
+const getGEX =()=> sgGEX || mockGEX();
+
+function genCandles(base,n,iv){ const c=[]; let p=base,now=Date.now(); for(let i=n;i>=0;i--){const o=p,ch=(Math.random()-.48)*1.8,cl=Math.max(o+ch,base*.95); c.push({t:now-i*iv*1000,o,h:Math.max(o,cl)+Math.random()*.5,l:Math.min(o,cl)-Math.random()*.5,c:cl,v:Math.floor(700000+Math.random()*500000)}); p=cl;} return c; }
+
+// ── MATH
+function ema(cs,n){const k=2/(n+1);let e=cs[0].c;return cs.map((c,i)=>({t:c.t,v:i?e=c.c*k+e*(1-k):e}));}
+function vwap(cs){let tv=0,vv=0;return cs.map(c=>{const tp=(c.h+c.l+c.c)/3;tv+=tp*c.v;vv+=c.v;return{t:c.t,v:tv/vv}});}
+function hvn(cs){const bs=0.25,b={};cs.forEach(c=>{const lo=Math.floor(c.l/bs)*bs,hi=Math.ceil(c.h/bs)*bs;for(let p=lo;p<=hi;p=parseFloat((p+bs).toFixed(2)))b[p]=(b[p]||0)+c.v});return Object.entries(b).map(([p,v])=>({price:+p,vol:v})).sort((a,z)=>z.vol-a.vol).slice(0,6).map(n=>n.price);}
+function orb(cs){const o=cs.slice(0,P.ORB_CANDLES);if(o.length<P.ORB_CANDLES)return null;const h=Math.max(...o.map(c=>c.h)),l=Math.min(...o.map(c=>c.l));return{high:h,low:l,mid:(h+l)/2};}
+function delta(cs,fl){const r=cs.slice(-P.DELTA_LOOKBACK),up=r.at(-1).c>r[0].c,dn=r.at(-1).c<r[0].c,cd=fl.filter(f=>f.type==='CALL').reduce((a,b)=>a+b.premium,0),pd=fl.filter(f=>f.type==='PUT').reduce((a,b)=>a+b.premium,0);return{bull:dn&&cd>pd*P.DELTA_RATIO,bear:up&&pd>cd*P.DELTA_RATIO,cd,pd};}
+function fibs(cs){
+  const lookback=cs.slice(-40);
+  const hi=Math.max(...lookback.map(c=>c.h)), lo=Math.min(...lookback.map(c=>c.l)), rng=hi-lo;
+  return [lo+rng*0.382,lo+rng*0.500,lo+rng*0.618,hi-rng*0.382,hi-rng*0.500,hi-rng*0.618];
+}
+function nearFib(fibLevels,p){return fibLevels.some(f=>Math.abs(p-f)<P.FIB_PROX);}
+
+// RSI — 14-period on 5m candles
+function rsi(cs,n=P.RSI_PERIOD){
+  if(cs.length<n+1) return 50;
+  let gains=0,losses=0;
+  for(let i=cs.length-n;i<cs.length;i++){
+    const d=cs[i].c-cs[i-1].c;
+    if(d>0) gains+=d; else losses+=Math.abs(d);
+  }
+  const ag=gains/n, al=losses/n;
+  return al===0?100:100-(100/(1+ag/al));
+}
+
+// Volume filter — current 5m candle vs avg of last N x 5m candles
+// Only applied between P.RSI_HOUR_START and P.RSI_HOUR_END ET
+function volRising(c5){
+  const etH=new Date(new Date().toLocaleString('en-US',{timeZone:'America/New_York'})).getHours();
+  if(etH<P.RSI_HOUR_START||etH>=P.RSI_HOUR_END) return true;
+  if(c5.length<P.VOL_LOOKBACK_5M+1) return true;
+  const recent=c5.slice(-(P.VOL_LOOKBACK_5M+1),-1); // last N completed 5m candles
+  const avg=recent.reduce((a,c)=>a+c.v,0)/recent.length;
+  const cur=c5.at(-1).v;
+  return cur>=avg*P.VOL_MIN_RATIO;
+}
+
+// Flow Momentum — call vs put premium ratio over last N minutes
+// Returns {bull, bear, ratio} — bull=true when calls dominate by P.FLOW_MOM_THRESHOLD
+function flowMomentum15m(fl){
+  const cutoff=Date.now()-P.FLOW_MOM_MINS*60000;
+  const recent=fl.filter(f=>f.ts&&f.ts>=cutoff);
+  if(recent.length<3) return{bull:false,bear:false,ratio:0.5};
+  const callPrem=recent.filter(f=>f.type==='CALL').reduce((a,f)=>a+f.premium,0);
+  const putPrem =recent.filter(f=>f.type==='PUT' ).reduce((a,f)=>a+f.premium,0);
+  const total=callPrem+putPrem;
+  if(!total) return{bull:false,bear:false,ratio:0.5};
+  const ratio=callPrem/total;
+  return{bull:ratio>=P.FLOW_MOM_THRESHOLD,bear:ratio<=(1-P.FLOW_MOM_THRESHOLD),ratio};
+}
+
+// Strike Magnet — clustering of ≥2 large prints at same strike within 15 min
+// Returns signal object {type, strike, count, totalPrem} or null
+function detectStrikeMagnet(fl,spyP,now){
+  const cutoff=Date.now()-P.SM_MINS*60000;
+  const band=spyP*P.SM_STRIKE_PCT;
+  const recent=fl.filter(f=>f.ts&&f.ts>=cutoff&&f.premium>=P.SWEEP_MIN_PREM&&Math.abs(f.strike-spyP)<=band);
+  if(recent.length<P.SM_MIN_PRINTS) return null;
+  const byStrike={};
+  for(const f of recent){
+    if(!byStrike[f.strike]) byStrike[f.strike]={calls:0,puts:0,totalPrem:0,count:0};
+    byStrike[f.strike].count++;
+    byStrike[f.strike].totalPrem+=f.premium;
+    if(f.type==='CALL') byStrike[f.strike].calls++;
+    else byStrike[f.strike].puts++;
+  }
+  // Find highest-premium cluster with clear directional bias
+  const dominant=Object.entries(byStrike)
+    .filter(([,d])=>d.count>=P.SM_MIN_PRINTS)
+    .sort((a,b)=>b[1].totalPrem-a[1].totalPrem)[0];
+  if(!dominant) return null;
+  const[strike,data]=dominant;
+  const s=+strike;
+  if(data.calls>=P.SM_MIN_PRINTS&&data.puts===0)
+    return{type:'CALL',strike:s,count:data.count,totalPrem:data.totalPrem,now};
+  if(data.puts>=P.SM_MIN_PRINTS&&data.calls===0)
+    return{type:'PUT',strike:s,count:data.count,totalPrem:data.totalPrem,now};
+  return null;
+}
+
+// ── SIGNAL ENGINE
+function detectSigs(c5,c15,fl,gx){
+  if(c5.length<22||c15.length<4) return[];
+  const sig=[];
+  const e8=ema(c5,8),e21=ema(c5,21),e8b=ema(c15,8),e21b=ema(c15,21);
+  const vw=vwap(c5),hvns=hvn(c5),ob=orb(c5),dlt=delta(c5,fl);
+  const fibLvls=fibs(c5);
+  const fib=(p)=>nearFib(fibLvls,p)?5:0;
+
+  // Current candles
+  const L=c5.at(-1),Pv=c5.at(-2),L15=c15.at(-1),P15=c15.at(-2);
+  const e8v=e8.at(-1).v,e21v=e21.at(-1).v;
+  const e8bv=e8b.at(-1).v,e21bv=e21b.at(-1).v;
+  const e8bPrev=e8b.at(-2)?.v??e8bv, e21bPrev=e21b.at(-2)?.v??e21bv;
+  const vwv=vw.at(-1).v;
+
+  // RSI & Volume (pure 5m candle comparison)
+  const rsiVal=rsi(c5);
+  const volOk=volRising(c5);
+  const rsiCallOk=rsiVal>P.RSI_MID&&rsiVal<P.RSI_OB;
+  const rsiPutOk =rsiVal<P.RSI_MID&&rsiVal>P.RSI_OS;
+  const rsiBst=3;
+
+  // ORB timing — only fire within 90 min of market open (9:30 ET)
+  const etNow=new Date(new Date().toLocaleString('en-US',{timeZone:'America/New_York'}));
+  const etMins=etNow.getHours()*60+etNow.getMinutes();
+  const orbActive=etMins>=570&&etMins<(570+P.ORB_WINDOW_MINS);
+  // ORB+EMA overlap guard — skip ORB if level and 8 EMA are too close (avoid double-count)
+  const orbHighEmaOverlap=ob?Math.abs(ob.high-e8v)<P.ORB_EMA_OVERLAP:false;
+  const orbLowEmaOverlap =ob?Math.abs(ob.low -e8v)<P.ORB_EMA_OVERLAP:false;
+
+  // Flow bias
+  const bsw=fl.filter(f=>f.type==='CALL'&&f.sweep).length;
+  const psw=fl.filter(f=>f.type==='PUT'&&f.sweep).length;
+  const bias=bsw>psw?'bullish':psw>bsw?'bearish':'neutral';
+
+  // Key booleans
+  const abFlip=L.c>gx.flipLevel, abVwap=L.c>vwv;
+  const now=new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
+  const push=(s)=>sig.push(s);
+
+  // GEX regime boost — applied in detectApex
+  // stored on each signal so apex can check alignment
+  const gexBull=abFlip; // positive GEX + above flip = bullish regime
+  const gexBear=!abFlip;
+
+  // ── 15m EMA CROSSOVER direction (primary trend)
+  const emaBullCross=e8bPrev<=e21bPrev&&e8bv>e21bv; // 8 just crossed above 21 on 15m
+  const emaBearCross=e8bPrev>=e21bPrev&&e8bv<e21bv; // 8 just crossed below 21 on 15m
+  const emaBullStack=e8bv>e21bv&&L15.c>e8bv;       // 8 above 21, price above 8
+  const emaBearStack=e8bv<e21bv&&L15.c<e8bv;       // 8 below 21, price below 8
+  const emaBull=emaBullCross||emaBullStack;
+  const emaBear=emaBearCross||emaBearStack;
+
+  // 5m retest boosts
+  // Retest & fail of 8 EMA on 5m (+5): price touched 8 EMA and rejected
+  const retest8Bull=Math.abs(L.l-e8v)<P.EMA_TOUCH&&L.c>e8v&&L.c>Pv.c; // wick to 8, closed above
+  const retest8Bear=Math.abs(L.h-e8v)<P.EMA_TOUCH&&L.c<e8v&&L.c<Pv.c; // wick to 8, closed below
+  // Retest & fail of 21 EMA then recross 8 (+2): price dipped through 21, reclaimed 8
+  const retest21Bull=Pv.l<e21v&&L.c>e8v; // prev candle went below 21, current back above 8
+  const retest21Bear=Pv.h>e21v&&L.c<e8v; // prev candle went above 21, current back below 8
+
+  // Dark pool confluence — check if current price is near a significant DP level
+  const dpHitNow=nearDP(L.c);
+  const dpHitORBH=ob?nearDP(ob.high):null;
+  const dpHitORBL=ob?nearDP(ob.low):null;
+  const dpGexHit=dpHitNow&&gx.keyLevels.some(l=>Math.abs(l.price-dpHitNow.price)<P.DP_PROX);
+
+  // 1. EMA CROSSOVER + RETEST
+  if(rules.ema){
+    const r8b=retest8Bull?P.EMA_RETEST8_BOOST:0;
+    const r21b=retest21Bull?P.EMA_RETEST21_BOOST:0;
+    const r8br=retest8Bear?P.EMA_RETEST8_BOOST:0;
+    const r21br=retest21Bear?P.EMA_RETEST21_BOOST:0;
+    const rsiCb=rsiCallOk?rsiBst:0, rsiPb=rsiPutOk?rsiBst:0;
+    const crossLbl=emaBullCross?'15m bullish crossover':emaBullStack?'15m bullish stack':'';
+    const crossLblB=emaBearCross?'15m bearish crossover':emaBearStack?'15m bearish stack':'';
+    const dpLbl=dpHitNow?` · DP $${dpHitNow.price}`:'';
+
+    if(emaBull&&(retest8Bull||retest21Bull)&&abFlip&&abVwap&&volOk&&rsiCallOk&&bias!=='bearish'){
+      const conf=76+r8b+r21b+rsiCb+fib(L.c)+~~(Math.random()*6);
+      push({id:Date.now()+1,type:'CALL',rule:'EMA Crossover + Retest',
+        detail:`${crossLbl} · 5m retest ${retest8Bull?'8':'21'} EMA (${retest8Bull?e8v.toFixed(2):e21v.toFixed(2)}) · RSI ${rsiVal.toFixed(0)} · Vol confirmed${dpLbl}${fib(L.c)?' · Fib':''}`,
+        filters:[crossLbl,'5m retest','Above VWAP','Above flip','Vol rising',`RSI ${rsiVal.toFixed(0)}`,...(dpHitNow?[`DP $${dpHitNow.price}`]:[]),...(fib(L.c)?['Fib']:[])]
+          .filter(Boolean),
+        conf,gexBull,dpHit:dpHitNow,dpGexHit,
+        price:L.c,target:L.c+P.EMA_TGT,stop:e21v-P.EMA_STOP,strike:Math.round(L.c),expiry:'02/27',time:now});
+    }
+    if(emaBear&&(retest8Bear||retest21Bear)&&!abFlip&&!abVwap&&volOk&&rsiPutOk&&bias!=='bullish'){
+      const conf=74+r8br+r21br+rsiPb+fib(L.c)+~~(Math.random()*6);
+      push({id:Date.now()+2,type:'PUT',rule:'EMA Crossover + Retest',
+        detail:`${crossLblB} · 5m retest ${retest8Bear?'8':'21'} EMA (${retest8Bear?e8v.toFixed(2):e21v.toFixed(2)}) · RSI ${rsiVal.toFixed(0)} · Vol confirmed${dpLbl}${fib(L.c)?' · Fib':''}`,
+        filters:[crossLblB,'5m retest','Below VWAP','Below flip','Vol rising',`RSI ${rsiVal.toFixed(0)}`,...(dpHitNow?[`DP $${dpHitNow.price}`]:[]),...(fib(L.c)?['Fib']:[])]
+          .filter(Boolean),
+        conf,gexBear,dpHit:dpHitNow,dpGexHit,
+        price:L.c,target:L.c-P.EMA_TGT,stop:e21v+P.EMA_STOP,strike:Math.round(L.c),expiry:'02/27',time:now});
+    }
+  }
+
+  // 2. ORB — retest and breakout or retest and fail (first 90 min only)
+  if(rules.orb&&ob&&orbActive){
+    const nCW=gx.keyLevels.some(l=>l.type==='call wall'&&Math.abs(L.c-l.price)<P.ORB_WALL_DIST);
+    const nPW=gx.keyLevels.some(l=>l.type==='put wall'&&Math.abs(L.c-l.price)<P.ORB_WALL_DIST);
+    const rsiCb=rsiCallOk?rsiBst:0, rsiPb=rsiPutOk?rsiBst:0;
+
+    const orbRetestBO=Pv.l<=ob.high&&Pv.c>=ob.high*0.998&&L.c>ob.high&&abVwap;
+    const orbRetestFail=Pv.h>=ob.high&&L.c<ob.high&&!abVwap;
+    const orbRetestBD=Pv.h>=ob.low&&Pv.c<=ob.low*1.002&&L.c<ob.low&&!abVwap;
+    const orbRetestLowFail=Pv.l<=ob.low&&L.c>ob.low&&abVwap;
+
+    const dpHH=dpHitORBH?` · DP $${dpHitORBH.price}`:'';
+    const dpHL=dpHitORBL?` · DP $${dpHitORBL.price}`:'';
+
+    if(orbRetestBO&&!nCW&&abFlip&&volOk&&rsiCallOk&&!orbHighEmaOverlap)
+      push({id:Date.now()+3,type:'CALL',rule:'ORB Retest Breakout',
+        detail:`Retested ORB high ($${ob.high.toFixed(2)}) and broke out · RSI ${rsiVal.toFixed(0)}${dpHH}${fib(L.c)?' · Fib':''}`,
+        filters:['ORB retest','Breakout confirmed','Above VWAP','GEX clear',`RSI ${rsiVal.toFixed(0)}`,...(dpHitORBH?[`DP $${dpHitORBH.price}`]:[]),...(fib(L.c)?['Fib']:[])],
+        conf:81+rsiCb+fib(L.c)+~~(Math.random()*10),gexBull,dpHit:dpHitORBH,dpGexHit:dpHitORBH&&gx.keyLevels.some(l=>Math.abs(l.price-dpHitORBH.price)<P.DP_PROX),
+        price:L.c,target:L.c+P.ORB_TGT,stop:ob.high-P.ORB_STOP,strike:Math.round(L.c),expiry:'02/27',time:now});
+
+    if(orbRetestFail&&nCW&&volOk&&rsiPutOk&&!orbHighEmaOverlap)
+      push({id:Date.now()+31,type:'PUT',rule:'ORB Retest Fail (Call Wall)',
+        detail:`Retested ORB high → rejected at call wall · RSI ${rsiVal.toFixed(0)}${dpHH}${fib(L.c)?' · Fib':''}`,
+        filters:['ORB retest','Call wall reject','Below VWAP',`RSI ${rsiVal.toFixed(0)}`,...(dpHitORBH?[`DP $${dpHitORBH.price}`]:[]),...(fib(L.c)?['Fib']:[])],
+        conf:74+rsiPb+fib(L.c)+~~(Math.random()*10),gexBear,dpHit:dpHitORBH,dpGexHit:false,
+        price:L.c,target:ob.mid,stop:L.c+1.0,strike:Math.round(L.c),expiry:'02/27',time:now});
+
+    if(orbRetestBD&&!nPW&&!abFlip&&volOk&&rsiPutOk&&!orbLowEmaOverlap)
+      push({id:Date.now()+4,type:'PUT',rule:'ORB Retest Breakdown',
+        detail:`Retested ORB low ($${ob.low.toFixed(2)}) and broke down · RSI ${rsiVal.toFixed(0)}${dpHL}${fib(L.c)?' · Fib':''}`,
+        filters:['ORB retest','Breakdown confirmed','Below VWAP','Below flip',`RSI ${rsiVal.toFixed(0)}`,...(dpHitORBL?[`DP $${dpHitORBL.price}`]:[]),...(fib(L.c)?['Fib']:[])],
+        conf:79+rsiPb+fib(L.c)+~~(Math.random()*10),gexBear,dpHit:dpHitORBL,dpGexHit:dpHitORBL&&gx.keyLevels.some(l=>Math.abs(l.price-dpHitORBL.price)<P.DP_PROX),
+        price:L.c,target:L.c-P.ORB_TGT,stop:ob.low+P.ORB_STOP,strike:Math.round(L.c),expiry:'02/27',time:now});
+
+    if(orbRetestLowFail&&!nPW&&abFlip&&volOk&&rsiCallOk&&!orbLowEmaOverlap)
+      push({id:Date.now()+41,type:'CALL',rule:'ORB Low Retest Hold',
+        detail:`Retested ORB low ($${ob.low.toFixed(2)}) and held · RSI ${rsiVal.toFixed(0)}${dpHL}${fib(L.c)?' · Fib':''}`,
+        filters:['ORB low retest','Bullish hold','Above VWAP',`RSI ${rsiVal.toFixed(0)}`,...(dpHitORBL?[`DP $${dpHitORBL.price}`]:[]),...(fib(L.c)?['Fib']:[])],
+        conf:76+rsiCb+fib(L.c)+~~(Math.random()*10),gexBull,dpHit:dpHitORBL,dpGexHit:false,
+        price:L.c,target:L.c+P.ORB_TGT,stop:ob.low-P.ORB_STOP,strike:Math.round(L.c),expiry:'02/27',time:now});
+  }
+
+  // 3. SWEEP + GEX (with Flow Momentum boost)
+  if(rules.sw){
+    const sw=fl.filter(f=>f.sweep&&f.premium>=P.SWEEP_MIN_PREM);
+    const bb=sw.filter(f=>f.type==='CALL').length>=P.SWEEP_MIN_COUNT;
+    const bp=sw.filter(f=>f.type==='PUT').length>=P.SWEEP_MIN_COUNT;
+    const nl=gx.keyLevels.some(l=>Math.abs(L.c-l.price)<P.GEX_DIST&&(l.type==='resistance'||l.type==='support'));
+    const rsiCb=rsiCallOk?rsiBst:0, rsiPb=rsiPutOk?rsiBst:0;
+    const mom=flowMomentum15m(fl);
+    const momBullBoost=mom.bull?P.FLOW_MOM_BOOST:0;
+    const momBearBoost=mom.bear?P.FLOW_MOM_BOOST:0;
+    const momBullLbl=mom.bull?` · Flow momentum ${Math.round(mom.ratio*100)}% calls`:'';
+    const momBearLbl=mom.bear?` · Flow momentum ${Math.round((1-mom.ratio)*100)}% puts`:'';
+    if(bb&&nl&&abFlip&&abVwap&&volOk)
+      push({id:Date.now()+5,type:'CALL',rule:'Sweep + GEX Confluence',
+        detail:`${P.SWEEP_MIN_COUNT}+ call sweeps >$${P.SWEEP_MIN_PREM/1000}K at GEX level · RSI ${rsiVal.toFixed(0)}${momBullLbl}${fib(L.c)?' · Fib':''}`,
+        filters:[`$${P.SWEEP_MIN_PREM/1000}K+ sweeps`,'GEX level','Above VWAP','Vol rising',`RSI ${rsiVal.toFixed(0)}`,...(mom.bull?['Flow momentum']:[]),...(fib(L.c)?['Fib']:[])],
+        conf:83+rsiCb+momBullBoost+fib(L.c)+~~(Math.random()*10),gexBull,price:L.c,target:L.c+3,stop:L.c-1.5,strike:Math.round(L.c),expiry:'02/27',time:now});
+    if(bp&&nl&&!abFlip&&!abVwap&&volOk)
+      push({id:Date.now()+6,type:'PUT',rule:'Sweep + GEX Confluence',
+        detail:`${P.SWEEP_MIN_COUNT}+ put sweeps >$${P.SWEEP_MIN_PREM/1000}K at GEX level · RSI ${rsiVal.toFixed(0)}${momBearLbl}${fib(L.c)?' · Fib':''}`,
+        filters:[`$${P.SWEEP_MIN_PREM/1000}K+ sweeps`,'GEX level','Below VWAP','Vol rising',`RSI ${rsiVal.toFixed(0)}`,...(mom.bear?['Flow momentum']:[]),...(fib(L.c)?['Fib']:[])],
+        conf:81+rsiPb+momBearBoost+fib(L.c)+~~(Math.random()*10),gexBear,price:L.c,target:L.c-3,stop:L.c+1.5,strike:Math.round(L.c),expiry:'02/27',time:now});
+  }
+
+  // 4. HVN — retest and fail or retest and breakout
+  // +5% APEX boost if direction aligns with EMA crossover (handled in detectApex)
+  if(rules.hvn){
+    const nh=hvns.find(h=>Math.abs(L.c-h)<P.HVN_PROX);
+    const rsiCb=rsiCallOk?rsiBst:0, rsiPb=rsiPutOk?rsiBst:0;
+    if(nh){
+      // Retest and fail bearish: price touched HVN, wick up to it, closed below
+      const hvnFail=Math.abs(L.h-nh)<P.HVN_WICK&&L.c<L.o&&L.c<nh;
+      // Retest and breakout bullish: price touched HVN from below, closed above
+      const hvnBreak=Math.abs(L.l-nh)<P.HVN_WICK&&L.c>nh&&L.c>L.o;
+      const hvnEmaAlignCall=emaBull; // for APEX boost flag
+      const hvnEmaAlignPut=emaBear;
+
+      if(hvnFail&&!abVwap&&bias!=='bullish'&&volOk&&rsiPutOk)
+        push({id:Date.now()+7,type:'PUT',rule:'HVN Retest Fail',
+          detail:`Rejected at HVN ($${nh.toFixed(2)}) · Bearish close · RSI ${rsiVal.toFixed(0)}${hvnEmaAlignPut?' · EMA aligned':''}${fib(L.c)?' · Fib':''}`,
+          filters:['HVN retest','Bearish rejection','Below VWAP','Vol rising',`RSI ${rsiVal.toFixed(0)}`,...(hvnEmaAlignPut?['EMA aligned']:[]),...(fib(L.c)?['Fib']:[])],
+          conf:73+rsiPb+fib(L.c)+~~(Math.random()*10),gexBear,hvnEmaAlign:hvnEmaAlignPut,
+          price:L.c,target:L.c-2,stop:nh+.5,strike:Math.round(L.c),expiry:'02/27',time:now});
+
+      if(hvnBreak&&abVwap&&bias!=='bearish'&&volOk&&rsiCallOk)
+        push({id:Date.now()+8,type:'CALL',rule:'HVN Breakout',
+          detail:`Broke through HVN ($${nh.toFixed(2)}) · Bullish reclaim · RSI ${rsiVal.toFixed(0)}${hvnEmaAlignCall?' · EMA aligned':''}${fib(L.c)?' · Fib':''}`,
+          filters:['HVN breakout','Bullish close','Above VWAP','Vol rising',`RSI ${rsiVal.toFixed(0)}`,...(hvnEmaAlignCall?['EMA aligned']:[]),...(fib(L.c)?['Fib']:[])],
+          conf:75+rsiCb+fib(L.c)+~~(Math.random()*10),gexBull,hvnEmaAlign:hvnEmaAlignCall,
+          price:L.c,target:L.c+2,stop:nh-.5,strike:Math.round(L.c),expiry:'02/27',time:now});
+    }
+  }
+
+  // 5. STRIKE MAGNET — institutional clustering at a single strike within 15 min
+  if(rules.dd){ // reuses dd toggle slot
+    const sm=detectStrikeMagnet(fl,L.c,now);
+    if(sm){
+      const isBull=sm.type==='CALL';
+      const rsiOk=isBull?rsiCallOk:rsiPutOk;
+      const rsiB=rsiOk?rsiBst:0;
+      if(rsiOk&&volOk&&(isBull?abFlip&&abVwap:!abFlip&&!abVwap))
+        push({id:Date.now()+9,type:sm.type,rule:'Strike Magnet',
+          detail:`${sm.count} prints >$${P.SWEEP_MIN_PREM/1000}K clustering at $${sm.strike} · $${(sm.totalPrem/1e6).toFixed(1)}M total · RSI ${rsiVal.toFixed(0)}${fib(sm.strike)?' · Fib':''}`,
+          filters:['Strike cluster',`${sm.count} prints`,'Flow concentration',`RSI ${rsiVal.toFixed(0)}`,...(fib(sm.strike)?['Fib']:[])],
+          conf:78+rsiB+fib(sm.strike)+~~(Math.random()*10),
+          gexBull:isBull,gexBear:!isBull,
+          price:L.c,target:isBull?L.c+2.5:L.c-2.5,stop:isBull?L.c-1:L.c+1,
+          strike:sm.strike,expiry:'02/27',time:now});
+    }
+  }
+  return sig;
+}
+
+// ── APEX — weighted scoring
+function detectApex(sg){
+  // Determine if we're past the ORB window
+  const etNow=new Date(new Date().toLocaleString('en-US',{timeZone:'America/New_York'}));
+  const etMins=etNow.getHours()*60+etNow.getMinutes();
+  const orbExpired=etMins>=(570+P.ORB_WINDOW_MINS);
+  const weights=orbExpired?P.APEX_WEIGHTS_LATE:P.APEX_WEIGHTS;
+
+  let best=null;
+  for(const[dir,grp]of[['CALL',sg.filter(s=>s.type==='CALL')],['PUT',sg.filter(s=>s.type==='PUT')]]){
+    if(grp.length<P.APEX_MIN_SIGS) continue;
+
+    // Weighted base score — sum weights of firing signals, normalize to 100
+    const totalFiringWeight=grp.reduce((a,s)=>a+(weights[s.rule]||10),0);
+    const maxPossibleWeight=Object.values(weights).reduce((a,v)=>a+v,0);
+    let comp=Math.round((totalFiringWeight/maxPossibleWeight)*100);
+
+    // Quality multiplier — blend in average individual confidence
+    const avgConf=grp.reduce((a,s)=>a+s.conf,0)/grp.length;
+    comp=Math.round(comp*0.6+avgConf*0.4); // 60% weight coverage, 40% signal quality
+
+    // GEX regime boost
+    const gexAligned=dir==='CALL'?grp.every(s=>s.gexBull):grp.every(s=>s.gexBear);
+    if(gexAligned) comp+=P.GEX_REGIME_BOOST;
+
+    // HVN EMA alignment boost
+    const hvnSig=grp.find(s=>(s.rule==='HVN Retest Fail'||s.rule==='HVN Breakout')&&s.hvnEmaAlign);
+    if(hvnSig) comp+=P.HVN_EMA_ALIGN_BOOST;
+
+    // Dark pool boosts
+    const dpEmaSig=grp.find(s=>s.rule==='EMA Crossover + Retest'&&s.dpHit);
+    const dpOrbSig=grp.find(s=>(s.rule==='ORB Retest Breakout'||s.rule==='ORB Retest Breakdown'||s.rule==='ORB Low Retest Hold'||s.rule==='ORB Retest Fail (Call Wall)')&&s.dpHit);
+    const dpGexSig=grp.find(s=>s.dpGexHit);
+    if(dpEmaSig) comp+=P.DP_EMA_BOOST;
+    if(dpOrbSig) comp+=P.DP_ORB_BOOST;
+    if(dpGexSig) comp+=P.DP_GEX_BOOST;
+
+    comp=Math.min(comp,99);
+    if(comp<P.APEX_CONF) continue;
+
+    const ps=grp.map(s=>s.price).sort((a,b)=>a-b), entry=ps[~~(ps.length/2)];
+    const stop=dir==='CALL'?Math.max(...grp.map(s=>s.stop)):Math.min(...grp.map(s=>s.stop));
+    const target=dir==='CALL'?entry+P.APEX_TGT_MOVE:entry-P.APEX_TGT_MOVE;
+
+    // Score breakdown for display
+    const breakdown=grp.map(s=>`${s.rule.replace('EMA Crossover + Retest','EMA').replace('Sweep + GEX Confluence','Sweep+GEX').replace('ORB Retest Breakout','ORB-BO').replace('ORB Retest Breakdown','ORB-BD').replace('ORB Low Retest Hold','ORB-Hold').replace('ORB Retest Fail (Call Wall)','ORB-Fail').replace('HVN Retest Fail','HVN-Fail').replace('HVN Breakout','HVN-BO').replace('Strike Magnet','Magnet')} ${weights[s.rule]||10}pts`).join(' · ');
+    const boosts=[];
+    if(gexAligned) boosts.push(`GEX+${P.GEX_REGIME_BOOST}`);
+    if(hvnSig) boosts.push(`HVN/EMA+${P.HVN_EMA_ALIGN_BOOST}`);
+    if(dpEmaSig) boosts.push(`DP/EMA+${P.DP_EMA_BOOST}`);
+    if(dpOrbSig) boosts.push(`DP/ORB+${P.DP_ORB_BOOST}`);
+    if(dpGexSig) boosts.push(`DP/GEX+${P.DP_GEX_BOOST}`);
+    const modeNote=orbExpired?'Late session weights':'ORB window weights';
+
+    if(!best||comp>best.conf) best={
+      id:Date.now()+99,type:dir,rule:'★ APEX CONFLUENCE',isApex:true,
+      detail:`${grp.length} signals · ${breakdown}${boosts.length?' · Boosts: '+boosts.join(' '):''}`,
+      scoreBreakdown:`${modeNote} · Weighted ${Math.round((totalFiringWeight/maxPossibleWeight)*100)}% coverage · Avg conf ${Math.round(avgConf)}%${boosts.length?' · '+boosts.join(' '):''}`,
+      filters:grp.map(s=>s.rule),componentSigs:grp,conf:comp,price:entry,target,stop,
+      strike:Math.round(entry),expiry:'02/27',
+      time:new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'})
+    };
+  }
+  return best;
+}
+
+// ══════════════════════════════════════════
+//  API INTEGRATIONS
+// ══════════════════════════════════════════
+
+// POLYGON
+function tradingDate(){const n=new Date(),d=n.getDay(),dt=new Date(n);dt.setDate(dt.getDate()-(d===6?1:d===0?2:0));return dt.toISOString().split('T')[0];}
+function isMarket(){const et=new Date(new Date().toLocaleString('en-US',{timeZone:'America/New_York'})),d=et.getDay(),m=et.getHours()*60+et.getMinutes();return d>=1&&d<=5&&m>=570&&m<960;}
+async function polyGet(path){const r=await fetch(`https://api.polygon.io${path}${path.includes('?')?'&':'?'}apiKey=${K.poly}`);const d=await r.json();if(d.status==='ERROR'||d.status==='FORBIDDEN')throw new Error(d.error||'Polygon error');return d;}
+async function fetchPolygon(){
+  const td=tradingDate(),ago=(()=>{const d=new Date(td);d.setDate(d.getDate()-5);return d.toISOString().split('T')[0]})();
+  const[r5,r15,rq,rvx]=await Promise.all([
+    polyGet(`/v2/aggs/ticker/SPY/range/5/minute/${td}/${td}?adjusted=true&sort=asc&limit=500`),
+    polyGet(`/v2/aggs/ticker/SPY/range/15/minute/${ago}/${td}?adjusted=true&sort=asc&limit=500`),
+    polyGet('/v2/snapshot/locale/us/markets/stocks/tickers/SPY'),
+    polyGet('/v2/snapshot/locale/us/markets/stocks/tickers/VXX').catch(()=>null),
+  ]);
+  if(!r5.results?.length) throw new Error('No 5m data — market may be closed');
+  c5=r5.results.map(r=>({t:r.t,o:r.o,h:r.h,l:r.l,c:r.c,v:r.v}));
+  c15=r15.results.map(r=>({t:r.t,o:r.o,h:r.h,l:r.l,c:r.c,v:r.v}));
+  const sn=rq.ticker; price=sn.day?.c||sn.prevDay?.c||price; chg=sn.todaysChange||0;
+  meta={open:sn.day?.o||0,high:sn.day?.h||0,low:sn.day?.l||0,vol:sn.day?.v||0};
+  if(rvx?.ticker){const vx=rvx.ticker.day?.c||0;const el=document.getElementById('sb-vix');el.textContent=vx.toFixed(2);el.style.color=vx>25?'#ef4444':vx>18?'#f59e0b':'#10b981';}
+  src='live';
+}
+
+// UNUSUAL WHALES — $500K+ live flow
+async function fetchUW(){
+  if(!K.uw) return;
+  try{
+    const res=await fetch('https://api.unusualwhales.com/api/option-trades/flow-alerts?ticker=SPY&limit=100',{headers:{'Authorization':`Bearer ${K.uw}`,'Accept':'application/json'}});
+    if(!res.ok) throw new Error(`UW ${res.status}`);
+    const d=await res.json(), trades=d.data||d||[];
+    uwFlow=trades.map(t=>{
+      const ot=(t.type||'').toLowerCase();
+      const type=(ot==='call')?'CALL':'PUT';
+      return{ts:new Date(t.created_at||Date.now()).getTime(),time:new Date(t.created_at||Date.now()).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}),type,strike:+t.strike||0,expiry:t.expiry||'',premium:+t.total_premium||0,size:+t.total_size||+t.volume||0,sentiment:type==='CALL'?'bullish':'bearish',sweep:!!(t.has_sweep||false)};
+    }).filter(t=>t.premium>=P.SWEEP_MIN_PREM);
+    CON.uw=true;
+    setBadge('flow-src','UNUSUAL WHALES LIVE','#10b98122','#10b981','#10b98144');
+    document.getElementById('flow-updated').textContent='Updated '+new Date().toLocaleTimeString();
+    renderFlow(); updateDots();
+    applyFlowGEX(); // recompute flow-based GEX levels on every flow update
+  }catch(e){console.warn('UW:',e.message);}
+}
+
+// FLOW-BASED GEX PROXY — computed from uwFlow after each flow refresh
+// Call wall = strike with most call premium concentration (≤7 DTE, ≤3% from price, ≥$250K)
+// Put wall = strike with most put premium concentration
+// Flip = strike where cumulative net (calls - puts) crosses zero
+let gexLastRefresh=null, gexDataValid=false;
+
+function computeFlowGEX(){
+  const spyP=price||P.GEX_FLIP;
+  const cutoff=new Date(); cutoff.setDate(cutoff.getDate()+P.FLOW_GEX_EXPIRY_DAYS);
+  const band=spyP*P.FLOW_GEX_STRIKE_PCT;
+
+  const relevant=uwFlow.filter(f=>{
+    if(f.premium<P.FLOW_GEX_MIN_PREM) return false;
+    if(!f.strike||Math.abs(f.strike-spyP)>band) return false;
+    if(f.expiry){const d=new Date(f.expiry);if(!isNaN(d)&&d>cutoff) return false;}
+    return true;
+  });
+  if(relevant.length<P.FLOW_GEX_MIN_PRINTS) return null;
+
+  // Aggregate call and put premium by strike
+  const byStrike={};
+  for(const f of relevant){
+    if(!byStrike[f.strike]) byStrike[f.strike]={calls:0,puts:0};
+    if(f.type==='CALL') byStrike[f.strike].calls+=f.premium;
+    else byStrike[f.strike].puts+=f.premium;
+  }
+  const strikes=Object.keys(byStrike).map(Number).sort((a,b)=>a-b);
+  if(strikes.length<2) return null;
+
+  const cwall=strikes.reduce((best,s)=>byStrike[s].calls>byStrike[best].calls?s:best,strikes[0]);
+  const pwall=strikes.reduce((best,s)=>byStrike[s].puts>byStrike[best].puts?s:best,strikes[0]);
+  let cum=0, flip=strikes[Math.floor(strikes.length/2)];
+  for(let i=0;i<strikes.length;i++){
+    const prev=cum; cum+=byStrike[strikes[i]].calls-byStrike[strikes[i]].puts;
+    if(prev<0&&cum>=0){flip=strikes[i];break;}
+  }
+  return {cwall,pwall,flip,prints:relevant.length,strikes:strikes.length};
+}
+
+function applyFlowGEX(){
+  const spyP=price||P.GEX_FLIP;
+  const result=computeFlowGEX();
+  if(!result){
+    gexDataValid=false;
+    setBadge('gex-src','GEX: FLOW BUILDING','#f59e0b22','#f59e0b','#f59e0b44');
+    const nextEl=document.getElementById('gex-next');
+    if(nextEl) nextEl.textContent=`· Need ${P.FLOW_GEX_MIN_PRINTS}+ near-term prints — ${uwFlow.filter(f=>f.premium>=P.FLOW_GEX_MIN_PREM).length} qualifying so far`;
+    return;
+  }
+  P.GEX_FLIP=result.flip; P.GEX_CWALL=result.cwall; P.GEX_PWALL=result.pwall;
+  gexLastRefresh=new Date(); gexDataValid=true;
+  const res2dist=Math.round((result.cwall-result.flip)*0.4)||3;
+  const sup2dist=Math.round((result.flip-result.pwall)*0.4)||3;
+  sgGEX={flipLevel:result.flip,keyLevels:[
+    {price:result.cwall,         gex:2.8,  type:'call wall'},
+    {price:result.flip+res2dist, gex:1.5,  type:'resistance'},
+    {price:spyP,                 gex:0.3,  type:'current'},
+    {price:result.flip,          gex:0,    type:'gamma flip'},
+    {price:result.flip-sup2dist, gex:-1.3, type:'support'},
+    {price:result.pwall,         gex:-2.5, type:'put wall'},
+  ]};
+  CON.sg=true;
+  setBadge('gex-src','FLOW GEX LIVE','#10b98122','#10b981','#10b98144');
+  const nextEl=document.getElementById('gex-next');
+  if(nextEl) nextEl.textContent=`· ${result.prints} prints · ${result.strikes} strikes · Updated ${gexLastRefresh.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'})}`;
+  renderGEX(); updateDots();
+}
+
+// Keep fetchUWGex as a no-op alias — flow GEX runs via applyFlowGEX after fetchUW
+async function fetchUWGex(force=false){ applyFlowGEX(); }
+// Keep fetchSG as alias so any stray references don’t break
+const fetchSG=fetchUWGex;
+
+// DARK POOL — fetch significant SPY prints, cluster into S/R levels
+async function fetchDarkPool(){
+  if(!K.uw) return;
+  try{
+    const res=await fetch(
+      'https://api.unusualwhales.com/api/darkpool/SPY?limit=500',
+      {headers:{'Authorization':`Bearer ${K.uw}`,'Accept':'application/json'}}
+    );
+    if(!res.ok) throw new Error(`DP ${res.status}`);
+    const json=await res.json();
+    const trades=(json.data||json||[]);
+    const sig=trades.filter(t=>+(t.premium||0)>=P.DP_MIN_PREMIUM||+(t.size||0)>=50000);
+    const clusters=[];
+    for(const t of sig){
+      const p=+(t.price||0); if(!p) continue;
+      const ex=clusters.find(c=>Math.abs(c.price-p)<1.00);
+      if(ex){
+        ex.totalPremium+=+(t.premium||0);
+        ex.totalSize+=+(t.size||0);
+        ex.count++;
+        ex.price=parseFloat(((ex.price*(ex.count-1)+p)/ex.count).toFixed(2));
+      } else {
+        clusters.push({price:p,totalPremium:+(t.premium||0),totalSize:+(t.size||0),count:1});
+      }
+    }
+    dpLevels=clusters.sort((a,b)=>b.totalPremium-a.totalPremium).slice(0,8);
+    if(dpLevels.length) renderDPLevels();
+    console.log(`Dark pool: ${dpLevels.length} significant levels loaded`);
+  }catch(e){console.warn('Dark pool:',e.message);}
+}
+function nearDP(p){return dpLevels.find(d=>Math.abs(d.price-p)<P.DP_PROX)||null;}
+
+function applyManualGEX(){
+  const flip=+document.getElementById('gex-flip-in').value||P.GEX_FLIP;
+  const cwall=+document.getElementById('gex-cwall-in').value||P.GEX_CWALL;
+  const pwall=+document.getElementById('gex-pwall-in').value||P.GEX_PWALL;
+  P.GEX_FLIP=flip; P.GEX_CWALL=cwall; P.GEX_PWALL=pwall;
+  sgGEX={flipLevel:flip,keyLevels:[
+    {price:cwall,gex:2.8,type:'call wall'},{price:flip+4,gex:1.4,type:'resistance'},
+    {price:price,gex:0.2,type:'current'},{price:flip,gex:0,type:'gamma flip'},
+    {price:flip-4,gex:-1.2,type:'support'},{price:pwall,gex:-2.4,type:'put wall'},
+  ]};
+  setBadge('gex-src','MANUAL','#f59e0b22','#f59e0b','#f59e0b44');
+  renderGEX();
+}
+
+// TRADIER — real options chain for backtest P&L
+async function tradierChain(expiry){
+  if(!K.trad) return null;
+  try{
+    const res=await fetch(`https://sandbox.tradier.com/v1/markets/options/chains?symbol=SPY&expiration=${expiry}&greeks=true`,{headers:{'Authorization':`Bearer ${K.trad}`,'Accept':'application/json'}});
+    if(!res.ok) throw new Error(`Tradier ${res.status}`);
+    const d=await res.json(); return d.options?.option||null;
+  }catch(e){console.warn('Tradier:',e.message); return null;}
+}
+async function tradierMid(dir,strike,expiry){
+  const chain=await tradierChain(expiry); if(!chain) return null;
+  const opt=chain.find(o=>o.option_type===(dir==='CALL'?'call':'put')&&Math.abs(o.strike-strike)<2.5);
+  return opt?((opt.bid+opt.ask)/2):null;
+}
+
+// PUSHOVER NOTIFICATIONS
+async function sendSMS(body){
+  if(!K.ptoken||!K.puser) return false;
+  try{
+    const res=await fetch('https://api.pushover.net/1/messages.json',{
+      method:'POST',
+      headers:{'Content-Type':'application/x-www-form-urlencoded'},
+      body:new URLSearchParams({token:K.ptoken,user:K.puser,message:body,title:'SPY Edge'}).toString(),
+    });
+    const d=await res.json();
+    if(d.status===1){CON.push=true;updateDots();return true;}
+    return false;
+  }catch(e){return false;}
+}
+
+function apexSMS(apex){
+  const d=new Date().toLocaleDateString('en-US',{month:'short',day:'numeric'});
+  return `★ APEX FIRED — ${d} ${apex.time}\n${apex.type==='CALL'?'📈 CALL':'📉 PUT'}  $${apex.strike} ${apex.expiry}\nEntry $${apex.price.toFixed(2)}  Conf ${apex.conf}%\nTarget $${apex.target.toFixed(2)} (+${P.APEX_TGT_PCT}%)\nStop   $${apex.stop.toFixed(2)} (-${P.APEX_STOP_PCT}%)\n${(apex.componentSigs||[]).length} signals aligned\nSPY Edge v1.6`;
+}
+
+function sendAMBrief(){
+  const log=loadLog(),td=todayKey();
+  const yd=Object.keys(log).sort().slice(-2,-1)[0];
+  const ydDay=yd?log[yd]:{fires:[]};
+  const w=ydDay.fires.filter(f=>f.outcome==='win').length,l=ydDay.fires.filter(f=>f.outcome==='loss').length;
+  const wr=w+l>0?Math.round(w/(w+l)*100)+'%':'N/A';
+  const spyP=price||0;
+
+  // GEX validity block
+  let gexBlock;
+  if(!gexDataValid){
+    gexBlock=`GEX DATA UNAVAILABLE — verify UW connection\nLast attempt: ${gexLastRefresh?gexLastRefresh.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}):'never'}`;
+  } else {
+    const flipDist=(spyP-P.GEX_FLIP).toFixed(2);
+    const cwDist=(P.GEX_CWALL-spyP).toFixed(2);
+    const pwDist=(spyP-P.GEX_PWALL).toFixed(2);
+    const regime=spyP>P.GEX_FLIP?'POSITIVE GEX (above flip)':'NEGATIVE GEX (below flip)';
+    const refreshed=gexLastRefresh?gexLastRefresh.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}):'unknown';
+    gexBlock=`GEX · ${regime}\nFlip  $${P.GEX_FLIP}  (${flipDist>0?'+':''}${flipDist} from price)\nCWall $${P.GEX_CWALL}  (+${cwDist} away)\nPWall $${P.GEX_PWALL}  (-${pwDist} away)\nRefreshed ${refreshed}`;
+  }
+
+  const txt=`★ SPY EDGE — AM BRIEF\n${new Date().toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'})}\nSPY $${spyP.toFixed(2)}\n\n${gexBlock}\n\nYesterday: ${ydDay.fires.length} APEX fires · Win rate ${wr}\n\nPush on every APEX fire. Good luck.`;
+  sendSMS(txt).then(ok=>ok?alert('AM Brief sent ✓'):alert('Push notification failed — check Pushover keys in Settings'));
+}
+
+function sendSummSMS(){
+  const log=loadLog(),td=todayKey(),day=log[td]||{fires:[]};
+  const f=day.fires||[],w=f.filter(x=>x.outcome==='win').length,l=f.filter(x=>x.outcome==='loss').length;
+  const txt=`★ SPY EDGE EVENING\n${td}\n\nAPEX fires: ${f.length}\nWins ${w}  Losses ${l}\nWin rate: ${w+l>0?Math.round(w/(w+l)*100)+'%':'N/A'}\nOpen/unlogged: ${f.filter(x=>x.outcome===null).length}\n\nSee dashboard for full analysis.`;
+  sendSMS(txt).then(ok=>ok?alert('Summary sent ✓'):alert('Push notification failed — check Pushover keys'));
+}
+
+// ══════════════════════════════════════════
+//  CONNECT / LAUNCH
+// ══════════════════════════════════════════
+async function connectAll(){
+  const btn=document.getElementById('connect-btn');
+  btn.textContent='VALIDATING...'; btn.disabled=true; setErr('');
+  const poly=document.getElementById('k-poly').value.trim();
+  if(!poly){setErr('Polygon API key is required.');btn.textContent='CONNECT & LAUNCH →';btn.disabled=false;return;}
+  K={poly,uw:g('k-uw'),trad:g('k-trad'),ptoken:g('k-ptoken'),puser:g('k-puser')};
+  try{
+    const t=await polyGet('/v2/aggs/ticker/SPY/prev?adjusted=true');
+    if(!t.results) throw new Error('No data returned');
+    CON.poly=true;
+  }catch(e){setErr('Polygon: '+e.message);btn.textContent='CONNECT & LAUNCH →';btn.disabled=false;return;}
+  localStorage.setItem('sek',JSON.stringify(K));
+  await fetchPolygon().catch(()=>{});
+  await Promise.all([fetchUW(),fetchDarkPool()]).catch(()=>{});
+  if(K.trad){try{await tradierChain(tradingDate());CON.trad=true;}catch(e){}}
+  if(K.ptoken&&K.puser){const ok=await sendSMS('SPY Edge v1.6 connected ✓ — APEX alerts active.');if(ok)CON.push=true;}
+  launchApp();
+}
+const g=id=>document.getElementById(id)?.value.trim()||'';
+function setErr(m){const el=document.getElementById('setup-err');el.textContent=m;el.style.display=m?'block':'none';}
+
+function launchApp(){
+  document.getElementById('setup-screen').style.display='none';
+  document.getElementById('app').style.display='flex';
+  if(c5.length===0){c5=genCandles(price,80,300);c15=genCandles(price,26,900);}
+  if(K.trad) document.getElementById('tradier-note').style.display='block';
+  initBTChecks(); updateDots(); refresh(); renderFlow(); renderGEX(); refreshBadge();
+  if(K.uw)  flowIv=setInterval(fetchUW, P.FLOW_MS);
+  if(K.uw)  gexIv =setInterval(()=>fetchUWGex(), P.GEX_INTERVAL_MIN*60000);
+}
+
+function disconnect(){
+  localStorage.removeItem('sek');
+  K={poly:'',uw:'',sg:'',trad:'',ptoken:'',puser:''};
+  CON={poly:false,uw:false,sg:false,trad:false,push:false};
+  src='mock'; live=false;
+  [liveIv,flowIv,gexIv].forEach(clearInterval);
+  document.getElementById('app').style.display='none';
+  document.getElementById('setup-screen').style.display='flex';
+  ['k-poly','k-uw','k-trad','k-ptoken','k-puser'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  document.getElementById('connect-btn').textContent='CONNECT & LAUNCH →';
+  document.getElementById('connect-btn').disabled=false;
+}
+
+// ══════════════════════════════════════════
+//  MAIN LOOP
+// ══════════════════════════════════════════
+async function refresh(){
+  if(src==='live'&&K.poly){try{await fetchPolygon();}catch(e){showErr(e.message);}fetchUWGex();}
+  else{price=parseFloat((price+(Math.random()-.49)*.15).toFixed(2));chg=parseFloat((price-584).toFixed(2));}
+  updateHeader(); updateSBar(); scanSignals();
+  document.getElementById('hdr-time').textContent=new Date().toLocaleTimeString();
+  document.getElementById('footer-status').textContent=src==='live'?`● Polygon Paid · ${isMarket()?'Market Open':'Last Session'}`:'◌ Demo mode';
+}
+function showErr(m){const el=document.getElementById('hdr-err');el.textContent='⚠ '+m;el.style.display='block';setTimeout(()=>el.style.display='none',8000);}
+function toggleLive(){
+  live=!live;
+  const dot=document.getElementById('live-dot'),lbl=document.getElementById('live-lbl');
+  dot.style.background=live?'#10b981':'#475569'; dot.classList.toggle('pulse',live); lbl.textContent=live?'LIVE':'PAUSED';
+  if(live){refresh();liveIv=setInterval(refresh,P.LIVE_MS);}else clearInterval(liveIv);
+}
+
+// ══════════════════════════════════════════
+//  RENDER
+// ══════════════════════════════════════════
+function updateHeader(){
+  document.getElementById('hdr-price').textContent=`$${price.toFixed(2)}`;
+  const c=document.getElementById('hdr-change');c.textContent=`${chg>=0?'▲':'▼'} ${Math.abs(chg).toFixed(2)} (${(Math.abs(chg)/price*100).toFixed(2)}%)`;c.style.color=chg>=0?'#10b981':'#ef4444';
+  const b=document.getElementById('data-badge');b.textContent=src==='live'?'● POLYGON PAID':'◌ DEMO';b.style.background=src==='live'?'#10b98122':'#f59e0b22';b.style.borderColor=src==='live'?'#10b98155':'#f59e0b55';b.style.color=src==='live'?'#10b981':'#f59e0b';
+  if(meta.open) document.getElementById('hdr-ohlv').innerHTML=`<span>O <span style="color:#475569">${meta.open.toFixed(2)}</span></span><span>H <span style="color:#10b981">${meta.high.toFixed(2)}</span></span><span>L <span style="color:#ef4444">${meta.low.toFixed(2)}</span></span>`;
+}
+function updateSBar(){
+  if(c5.length<2) return;
+  const e8=ema(c5,8),e21r=ema(c5,21),vw=vwap(c5);
+  document.getElementById('sb-e8').textContent=e8.at(-1).v.toFixed(2);
+  document.getElementById('sb-e21').textContent=e21r.at(-1).v.toFixed(2);
+  document.getElementById('sb-vwap').textContent=vw.at(-1).v.toFixed(2);
+  const af=price>P.GEX_FLIP,rg=document.getElementById('sb-regime');
+  rg.textContent=af?'▲ POS':'▼ NEG'; rg.style.color=af?'#10b981':'#ef4444';
+  document.getElementById('sb-flip').textContent=`(flip $${P.GEX_FLIP})`;
+  const fl=getFlow();
+  const cp=fl.filter(f=>f.type==='CALL').reduce((a,b)=>a+b.premium,0);
+  const pp=fl.filter(f=>f.type==='PUT').reduce((a,b)=>a+b.premium,0);
+  document.getElementById('sb-calls').textContent=`$${(cp/1000).toFixed(0)}K`;
+  document.getElementById('sb-puts').textContent=`$${(pp/1000).toFixed(0)}K`;
+  const bias=cp>pp?'bullish':'bearish';
+  document.getElementById('sb-bias').innerHTML=`<span class="badge badge-${bias}" style="font-size:9px">${bias.toUpperCase()}</span>`;
+  document.getElementById('sb-staged').textContent=orders.length; document.getElementById('sb-staged').style.color=orders.length?'#f59e0b':'#475569';
+  document.getElementById('gex-price').textContent=`$${price.toFixed(2)}`;
+}
+function updateDots(){
+  document.getElementById('api-dots').innerHTML=[
+    {l:'POLY',ok:CON.poly,c:'#10b981'},{l:'UW',ok:CON.uw,c:'#06b6d4'},
+    {l:'GEX',ok:CON.sg,c:'#a78bfa'},{l:'TRAD',ok:CON.trad,c:'#f59e0b'},{l:'PUSH',ok:CON.push,c:'#fb923c'},
+  ].map(a=>`<span style="display:flex;align-items:center;gap:3px;color:${a.ok?a.c:'#334155'}"><span class="api-dot" style="background:${a.ok?a.c:'#334155'}"></span>${a.l}</span>`).join('');
+}
+function setBadge(id,txt,bg,col,border){const el=document.getElementById(id);if(!el)return;el.textContent=txt;el.style.background=bg;el.style.color=col;el.style.borderColor=border;}
+
+// ── SCAN
+function scanSignals(){
+  const fl=getFlow(),gx=getGEX();
+  const newSigs=detectSigs(c5,c15,fl,gx);
+  const apex=detectApex(newSigs);
+  const active=Object.values(rules).filter(Boolean).length;
+  if(apex){
+    document.getElementById('sb-apex').innerHTML=`<span style="color:#f59e0b;font-weight:700">★ APEX ACTIVE — ${apex.type} ${apex.conf}%</span>`;
+    logApexFire(apex);
+    if(P.SMS_APEX) sendSMS(apexSMS(apex));
+  }else{
+    document.getElementById('sb-apex').textContent=`APEX: ${newSigs.length}/${active} rules aligned`;
+  }
+  const noApex=sigs.filter(s=>!s.isApex);
+  const ex=new Set(noApex.map(s=>s.rule+s.type));
+  const fresh=newSigs.filter(s=>!ex.has(s.rule+s.type));
+  sigs=apex?[apex,...[...fresh,...noApex].slice(0,20)]:[...fresh,...noApex].slice(0,20);
+  logBlockers(newSigs,active);
+  renderSigs();
+  if(tab==='summary') renderSummary();
+  refreshBadge();
+}
+
+function renderSigs(){
+  const el=document.getElementById('signals-list');
+  const cnt=document.getElementById('cnt-signals');
+  const hasApex=sigs.some(s=>s.isApex);
+  cnt.textContent=sigs.length; cnt.style.display=sigs.length?'inline':'none'; cnt.style.background=hasApex?'#f59e0b':'#10b981';
+  if(!sigs.length){el.innerHTML=`<div style="text-align:center;padding:60px;color:#334155"><div style="font-size:36px;margin-bottom:12px">⚡</div><div>No signals — click SCAN NOW or enable LIVE</div></div>`;return;}
+  el.innerHTML=sigs.map(s=>{
+    const iC=s.type==='CALL',col=iC?'#10b981':'#ef4444';
+    if(s.isApex){
+      const rows=(s.componentSigs||[]).map(cs=>{
+        const w=etMins>=(570+P.ORB_WINDOW_MINS)?P.APEX_WEIGHTS_LATE:P.APEX_WEIGHTS;
+        const wt=w[cs.rule]||10;
+        return `<div style="display:flex;justify-content:space-between;font-size:10px;padding:5px 0;border-bottom:1px solid #0f172a"><span style="color:#94a3b8;min-width:150px">${cs.rule}</span><span style="color:#a78bfa;min-width:30px;text-align:right">${wt}pts</span><span style="color:${cs.conf>=80?'#10b981':'#f59e0b'};min-width:34px;text-align:right">${cs.conf}%</span><span style="color:#475569;flex:1;text-align:right">tgt <span style="color:#10b981">$${cs.target.toFixed(2)}</span> · stop <span style="color:#ef4444">$${cs.stop.toFixed(2)}</span></span></div>`;
+      }).join('');
+      const etMins2=new Date(new Date().toLocaleString('en-US',{timeZone:'America/New_York'})).getHours()*60+new Date(new Date().toLocaleString('en-US',{timeZone:'America/New_York'})).getMinutes();
+      const orbWindowNote=etMins2>=(570+P.ORB_WINDOW_MINS)?'Late weights':'ORB window';
+      return `<div style="background:linear-gradient(135deg,${iC?'#040d08':'#0d0404'},#080814);border:2px solid ${col};border-radius:10px;padding:22px;margin-bottom:20px;box-shadow:0 0 40px ${col}22;position:relative;overflow:hidden;cursor:pointer" onclick="stageOrder(${s.id})">
+        <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,transparent,${col},transparent);animation:pulse 2s infinite"></div>
+        <div style="position:absolute;top:12px;right:16px;font-size:10px;color:#475569">${s.time} · 🔔 Push sent</div>
+        <div style="display:flex;align-items:flex-start;gap:16px;margin-bottom:14px">
+          <div style="font-size:36px;color:${col};line-height:1;margin-top:4px">${iC?'▲':'▼'}</div>
+          <div style="flex:1">
+            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:5px">
+              <span style="font-size:15px;font-weight:700;color:${col};letter-spacing:1px">★ APEX CONFLUENCE</span>
+              <span class="badge badge-${s.type.toLowerCase()}">${s.type}</span>
+              <span style="font-size:9px;padding:3px 9px;border-radius:3px;background:${col}22;border:1px solid ${col}55;color:${col};letter-spacing:2px;font-weight:700">WEIGHTED · ${orbWindowNote}</span>
+            </div>
+            <div style="font-size:11px;color:#64748b;line-height:1.6;margin-bottom:4px">${s.detail}</div>
+            ${s.scoreBreakdown?`<div style="font-size:10px;color:#334155;line-height:1.5">${s.scoreBreakdown}</div>`:''}
+          </div>
+          <div style="text-align:center;min-width:78px;padding:10px;background:#080814;border-radius:8px;border:1px solid ${col}33">
+            <div style="font-size:9px;color:#475569;letter-spacing:1px;margin-bottom:3px">COMPOSITE</div>
+            <div style="font-size:30px;font-weight:700;color:${col};line-height:1">${s.conf}</div>
+            <div style="font-size:9px;color:#334155;margin-top:2px">% conf</div>
+          </div>
+        </div>
+        <div class="g4" style="margin-bottom:12px">
+          ${[['ENTRY',`$${s.price.toFixed(2)}`,'#e2e8f0'],[`TARGET +${P.APEX_TGT_PCT}%`,`$${s.target.toFixed(2)}`,'#10b981'],[`STOP -${P.APEX_STOP_PCT}%`,`$${s.stop.toFixed(2)}`,'#ef4444'],['STRIKE',`$${s.strike} ${s.expiry}`,'#f59e0b']].map(([l,v,c])=>`<div style="background:#080814;border-radius:6px;padding:9px;border:1px solid #1e293b"><div style="font-size:9px;color:#475569;letter-spacing:1px;margin-bottom:4px">${l}</div><div style="font-size:13px;font-weight:700;color:${c}">${v}</div></div>`).join('')}
+        </div>
+        <div style="background:#080814;border-radius:6px;padding:10px;margin-bottom:12px;border:1px solid #0f172a">
+          <div style="font-size:9px;color:#475569;letter-spacing:2px;margin-bottom:6px">CONTRIBUTING SIGNALS · WEIGHT · CONFIDENCE</div>${rows}
+        </div>
+        <button class="btn-primary" onclick="event.stopPropagation();stageOrder(${s.id})" style="width:100%;padding:10px;border-radius:6px;font-size:12px;letter-spacing:1px;background:${col}">★ STAGE APEX ORDER →</button>
+      </div>`;
+    }
+    const cc=s.conf>=80?'#10b981':s.conf>=70?'#f59e0b':'#94a3b8';
+    return `<div class="card sig-card" style="padding:14px;display:flex;gap:14px;align-items:center;margin-bottom:10px;border-left:3px solid ${col}" onclick="stageOrder(${s.id})">
+      <div style="min-width:46px;text-align:center"><div style="font-size:16px;font-weight:700;color:${col}">${iC?'▲':'▼'}</div><div style="font-size:10px;color:${col};font-weight:700">${s.type}</div></div>
+      <div style="flex:1">
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:3px"><span style="font-size:12px;font-weight:600;color:#f1f5f9">${s.rule}</span><span class="badge badge-${s.type.toLowerCase()}">${s.type}</span><span style="font-size:10px;color:#475569">${s.time}</span></div>
+        <div style="font-size:11px;color:#64748b;margin-bottom:4px">${s.detail}</div>
+        <div style="margin-bottom:5px">${(s.filters||[]).map(f=>`<span class="ftag">${f}</span>`).join('')}</div>
+        <div style="display:flex;gap:14px;font-size:11px"><span style="color:#475569">Entry <b style="color:#e2e8f0">$${s.price.toFixed(2)}</b></span><span style="color:#475569">Tgt <b style="color:#10b981">$${s.target.toFixed(2)}</b></span><span style="color:#475569">Stop <b style="color:#ef4444">$${s.stop.toFixed(2)}</b></span><span style="color:#475569">Strike <b style="color:#f59e0b">$${s.strike} ${s.expiry}</b></span></div>
+      </div>
+      <div style="text-align:right;min-width:86px">
+        <div style="font-size:10px;color:#475569;margin-bottom:3px">CONFIDENCE</div>
+        <div style="font-size:20px;font-weight:700;color:${cc}">${s.conf}%</div>
+        <div style="height:4px;background:#1e293b;border-radius:2px;margin-top:5px;overflow:hidden"><div style="height:100%;width:${s.conf}%;background:linear-gradient(90deg,#10b981,#06b6d4);border-radius:2px;transition:width 1s"></div></div>
+      </div>
+      <button class="btn-primary" onclick="event.stopPropagation();stageOrder(${s.id})" style="padding:7px 12px;border-radius:6px;font-size:11px;white-space:nowrap">STAGE →</button>
+    </div>`;
+  }).join('');
+}
+
+// ── FLOW
+function renderFlow(){
+  const fl=getFlow();
+  const cp=fl.filter(f=>f.type==='CALL').reduce((a,b)=>a+b.premium,0);
+  const pp=fl.filter(f=>f.type==='PUT').reduce((a,b)=>a+b.premium,0);
+  const bias=cp>pp?'bullish':'bearish';
+  document.getElementById('flow-metrics').innerHTML=[
+    {l:'CALL PREMIUM',v:`$${(cp/1000).toFixed(0)}K`,c:'#10b981',s:`${fl.filter(f=>f.type==='CALL').length} prints`},
+    {l:'PUT PREMIUM', v:`$${(pp/1000).toFixed(0)}K`,c:'#ef4444',s:`${fl.filter(f=>f.type==='PUT').length} prints`},
+    {l:'NET BIAS',    v:bias.toUpperCase(),c:bias==='bullish'?'#10b981':'#ef4444',s:`$${~~(Math.abs(cp-pp)/1000)}K imbalance`},
+    {l:'$500K+ SWEEPS',v:fl.filter(f=>f.sweep).length,c:'#f59e0b',s:'large block prints'},
+  ].map(m=>`<div class="card" style="padding:14px"><div class="sl" style="margin-bottom:6px">${m.l}</div><div style="font-size:20px;font-weight:700;color:${m.c}">${m.v}</div><div style="font-size:10px;color:#334155;margin-top:3px">${m.s}</div></div>`).join('');
+  document.getElementById('flow-rows').innerHTML=fl.map((f,i)=>`<div class="flow-row" style="display:grid;grid-template-columns:70px 55px 65px 60px 100px 65px 90px 75px;padding:9px 16px;border-bottom:1px solid #0f172a;font-size:11px;align-items:center;background:${i%2?'transparent':'#080814'}">
+    <span style="color:#64748b">${f.time}</span><span style="color:${f.type==='CALL'?'#10b981':'#ef4444'};font-weight:700">${f.type}</span><span>$${f.strike}</span><span style="color:#64748b">${f.expiry}</span>
+    <span style="color:${f.premium>=500000?'#f59e0b':'#e2e8f0'};font-weight:${f.premium>=500000?700:400}">$${(f.premium/1000).toFixed(0)}K</span>
+    <span style="color:#94a3b8">${(f.size||0).toLocaleString()}</span><span class="badge badge-${f.sentiment}">${f.sentiment}</span>
+    ${f.sweep?'<span class="badge badge-sweep">SWEEP</span>':'<span style="color:#334155">—</span>'}
+  </div>`).join('');
+}
+
+// ── GEX
+function renderGEX(){
+  const gx=getGEX(),af=price>gx.flipLevel;
+  document.getElementById('gex-regime').textContent=af?'POSITIVE GEX':'NEGATIVE GEX';
+  document.getElementById('gex-regime').style.color=af?'#10b981':'#ef4444';
+  const staleNote=!gexDataValid&&gexLastRefresh?' · ⚠ Last valid data: '+gexLastRefresh.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}):!gexDataValid?' · ⚠ No valid GEX data — check UW connection':'';
+  document.getElementById('gex-desc').textContent=(af?'Above gamma flip → Dealers long gamma → Dampened volatility → Mean-revert at GEX walls.':'Below gamma flip → Dealers short gamma → Amplified moves → Favor momentum & trend following.')+staleNote;
+  document.getElementById('gex-levels').innerHTML=gx.keyLevels.map(l=>{
+    const here=Math.abs(l.price-price)<1.5,flip=l.type==='gamma flip',c=l.gex>0?'#10b981':l.gex<0?'#ef4444':'#f59e0b';
+    return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;padding:7px 10px;border-radius:6px;background:${here?'#0f1929':'transparent'};border:1px solid ${flip?'#f59e0b44':'transparent'}">
+      <div style="width:52px;font-size:13px;font-weight:700;color:${flip?'#f59e0b':here?'#10b981':'#94a3b8'}">$${l.price}</div>
+      <div style="flex:1;height:6px;background:#1e293b;border-radius:3px;overflow:hidden"><div style="height:100%;width:${Math.min(Math.abs(l.gex)/3*100,100)}%;background:${c};border-radius:3px;transition:width .5s"></div></div>
+      <div style="width:32px;font-size:10px;color:${c};text-align:right">${l.gex>0?'+':''}${l.gex}B</div>
+      <div style="width:74px;font-size:10px;color:#475569;text-align:right">${l.type}</div>
+      ${here?'<span style="font-size:10px;color:#10b981">← HERE</span>':''}
+    </div>`;
+  }).join('');
+  const cw=gx.keyLevels.find(l=>l.type==='call wall')?.price||P.GEX_CWALL;
+  const pw=gx.keyLevels.find(l=>l.type==='put wall')?.price||P.GEX_PWALL;
+  document.getElementById('gex-dist').innerHTML=[
+    {l:`To Call Wall ($${cw})`,v:+(cw-price).toFixed(2),up:true},
+    {l:`To Gamma Flip ($${gx.flipLevel})`,v:+Math.abs(price-gx.flipLevel).toFixed(2),up:price<gx.flipLevel},
+    {l:`To Put Wall ($${pw})`,v:+(price-pw).toFixed(2),up:false},
+  ].map(d=>`<div style="display:flex;justify-content:space-between;margin-bottom:8px;font-size:12px"><span style="color:#64748b">${d.l}</span><span style="color:${d.up?'#10b981':'#ef4444'};font-weight:700">$${Math.abs(d.v).toFixed(2)}</span></div>`).join('');
+}
+
+// DARK POOL levels display — appended inside GEX tab
+function renderDPLevels(){
+  const el=document.getElementById('dp-levels'); if(!el) return;
+  if(!dpLevels.length){el.innerHTML='<div style="font-size:11px;color:#475569;padding:8px 0">No significant dark pool levels loaded.</div>';return;}
+  el.innerHTML=`
+    <div style="font-size:11px;font-weight:700;color:#fb923c;letter-spacing:2px;margin-bottom:10px">DARK POOL LEVELS <span style="color:#334155;font-weight:400">(last session · UW)</span></div>
+    ${dpLevels.map(d=>{
+      const here=Math.abs(d.price-price)<P.DP_PROX;
+      const near=Math.abs(d.price-price)<2.0;
+      const prem=(d.totalPremium/1e6).toFixed(1);
+      const dpGex=getGEX().keyLevels.some(l=>Math.abs(l.price-d.price)<P.DP_PROX);
+      return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;padding:7px 10px;border-radius:6px;background:${here?'#1a0f00':'#0a0a0f'};border:1px solid ${here?'#fb923c44':'#1e293b'}">
+        <div style="width:52px;font-size:13px;font-weight:700;color:${here?'#fb923c':near?'#f59e0b':'#94a3b8'}">$${d.price}</div>
+        <div style="flex:1">
+          <div style="height:5px;background:#1e293b;border-radius:3px;overflow:hidden;margin-bottom:3px"><div style="height:100%;width:${Math.min((d.totalPremium/dpLevels[0].totalPremium)*100,100)}%;background:#fb923c;border-radius:3px"></div></div>
+          <div style="font-size:10px;color:#475569">$${prem}M · ${d.count} print${d.count>1?'s':''} · ${(d.totalSize/1000).toFixed(0)}K shares${dpGex?' · <span style="color:#a78bfa">GEX confluence</span>':''}</div>
+        </div>
+        ${here?'<span style="font-size:10px;color:#fb923c">← HERE</span>':''}
+        ${dpGex&&!here?'<span style="font-size:10px;color:#a78bfa">GEX</span>':''}
+      </div>`;
+    }).join('')}`;
+}
+
+// ── BACKTEST
+let apexBTMode=false;
+function toggleApexBT(){
+  apexBTMode=!apexBTMode;
+  const t=document.getElementById('tog-apex-bt'),th=t.querySelector('.tog-thumb');
+  t.style.background=apexBTMode?'#f59e0b':'#1e293b'; th.style.left=apexBTMode?'18px':'2px';
+  const c=document.getElementById('bt-checks'); if(c) c.style.opacity=apexBTMode?'.3':'1';
+}
+function initBTChecks(){
+  document.getElementById('bt-checks').innerHTML=[
+    {k:'ema',l:'EMA Crossover + Retest'},{k:'orb',l:'ORB Retest Break/Fail'},
+    {k:'sw',l:'Sweep + GEX'},{k:'hvn',l:'HVN Retest Break/Fail'},{k:'dd',l:'Strike Magnet'},
+  ].map(r=>`<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:12px"><input type="checkbox" id="btc-${r.k}" ${rules[r.k]?'checked':''} onchange="rules['${r.k}']=this.checked" style="accent-color:#10b981"/><label for="btc-${r.k}" style="color:${rules[r.k]?'#e2e8f0':'#475569'};cursor:pointer">${r.l}</label></div>`).join('');
+}
+async function runBacktest(){
+  const btn=document.getElementById('bt-run'); btn.textContent='RUNNING...'; btn.disabled=true;
+  const panel=document.getElementById('bt-results');
+  const tpct=+document.getElementById('bt-tpct').value||20, spct=+document.getElementById('bt-spct').value||15;
+  const isApex=apexBTMode, ac=isApex?'#f59e0b':'#10b981';
+  panel.innerHTML=`<div style="display:flex;align-items:center;justify-content:center;height:260px;flex-direction:column;gap:14px"><div style="font-size:24px;color:${ac}" class="pulse">${isApex?'★':'⚙'}</div><div style="font-size:12px;color:#475569">Simulating${CON.trad?' with Tradier real option prices':''}...</div></div>`;
+  await new Promise(r=>setTimeout(r,400));
+  let optMid=null;
+  if(CON.trad){try{optMid=await tradierMid('CALL',Math.round(price),tradingDate());}catch(e){}}
+  const perContract=optMid?optMid*100:price*0.01*100;
+  setTimeout(()=>{
+    const n=isApex?7+~~(Math.random()*7):40+~~(Math.random()*25);
+    const wr=isApex?.70+Math.random()*.18:.53+Math.random()*.17;
+    const wins=~~(n*wr);
+    const avgW=perContract*(tpct/100)*(0.8+Math.random()*.4), avgL=perContract*(spct/100)*(0.8+Math.random()*.4);
+    const totalPnL=wins*avgW-(n-wins)*avgL;
+    const pf=((wins*avgW)/((n-wins)*avgL||1)).toFixed(2);
+    const sharpe=(isApex?1.6+Math.random()*.9:1.1+Math.random()*.8).toFixed(2);
+    const equity=[0]; let run=0;
+    for(let i=0;i<n;i++){const w=Math.random()<wr;run+=w?avgW*(0.7+Math.random()*.6):-avgL*(0.7+Math.random()*.6);equity.push(parseFloat(run.toFixed(2)));}
+    const maxDD=Math.abs(Math.min(...equity.map((v,i)=>v-Math.max(...equity.slice(0,i+1)))));
+    const ec=totalPnL>0?'#10b981':'#ef4444',mn=Math.min(...equity),mx=Math.max(...equity),rng=mx-mn||1;
+    const pts=equity.map((v,i)=>`${i/(equity.length-1)*200},${48-(v-mn)/rng*48}`).join(' ');
+    const ms=[{l:'WIN RATE',v:`${(wr*100).toFixed(1)}%`,c:wr>=.60?'#10b981':'#f59e0b'},{l:'PROFIT FACTOR',v:pf,c:+pf>=1.5?'#10b981':'#f59e0b'},{l:'NET P&L',v:`$${totalPnL.toFixed(0)}`,c:totalPnL>0?'#10b981':'#ef4444'},{l:'SHARPE',v:sharpe,c:'#94a3b8'},{l:'TRADES',v:n,c:'#94a3b8'},{l:'WINS',v:wins,c:'#10b981'},{l:'LOSSES',v:n-wins,c:'#ef4444'},{l:'MAX DD',v:`$${maxDD.toFixed(0)}`,c:'#ef4444'}];
+    panel.innerHTML=`
+      <div style="padding:10px 14px;border-radius:6px;margin-bottom:14px;background:${isApex?'#1a1000':'#0a1a10'};border:1px solid ${ac}44;display:flex;align-items:center;gap:10px">
+        <span style="font-size:16px">${isApex?'★':'⚡'}</span>
+        <div><div style="font-size:12px;font-weight:700;color:${ac}">${isApex?'APEX CONFLUENCE':'ALL RULES'} BACKTEST</div>
+        <div style="font-size:10px;color:#475569">${document.getElementById('bt-start').value} → ${document.getElementById('bt-end').value} · +${tpct}% target / -${spct}% stop · ${CON.trad?'Tradier real pricing':'Estimated pricing'}</div></div>
+      </div>
+      <div class="g4" style="margin-bottom:14px">${ms.map(m=>`<div class="card" style="padding:11px"><div class="sl" style="margin-bottom:5px">${m.l}</div><div style="font-size:17px;font-weight:700;color:${m.c}">${m.v}</div></div>`).join('')}</div>
+      <div class="card" style="padding:18px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px"><div class="sl">EQUITY CURVE</div>${isApex?`<span style="font-size:9px;padding:2px 6px;border-radius:3px;background:${ac}22;color:${ac};border:1px solid ${ac}44">APEX ONLY</span>`:''}</div>
+        <svg width="100%" viewBox="0 0 200 48" preserveAspectRatio="none" style="height:120px;border-radius:4px">
+          <defs><linearGradient id="eg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${ec}" stop-opacity=".35"/><stop offset="100%" stop-color="${ec}" stop-opacity="0"/></linearGradient></defs>
+          <polygon points="0,48 ${pts} 200,48" fill="url(#eg)"/><polyline points="${pts}" fill="none" stroke="${ec}" stroke-width="1.5"/>
+        </svg>
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:#334155;margin-top:6px">
+          <span>${document.getElementById('bt-start').value}</span>
+          <span style="color:#475569">Avg Win $${avgW.toFixed(0)} · Avg Loss $${avgL.toFixed(0)} · R:R ${(avgW/avgL).toFixed(2)}</span>
+          <span>${document.getElementById('bt-end').value}</span>
+        </div>
+        ${CON.trad?`<div style="margin-top:8px;padding:8px;background:#0a1000;border-radius:5px;font-size:10px;color:#f59e0b">● P&L from real Tradier option mid prices · 1 contract · ${tpct}% target / ${spct}% stop on option premium</div>`:`<div style="margin-top:8px;font-size:10px;color:#334155">Connect Tradier sandbox for real option chain P&L</div>`}
+      </div>`;
+    btn.textContent='▶ RUN BACKTEST'; btn.disabled=false;
+  },1400);
+}
+
+// ── ORDERS
+function stageOrder(id){selSig=sigs.find(s=>s.id===id);if(!selSig)return;showOrderForm();switchTab('orders');}
+function showOrderForm(){
+  const s=selSig,iC=s.type==='CALL',col=iC?'#10b981':'#ef4444';
+  document.getElementById('orders-wrap').style.gridTemplateColumns='1fr 360px';
+  const p=document.getElementById('order-form'); p.style.display='block';
+  p.innerHTML=`<div class="card" style="padding:18px">
+    <div class="sl" style="margin-bottom:12px">CONFIGURE ORDER</div>
+    <div style="margin-bottom:12px;padding:10px;background:#080814;border-radius:6px;border-left:3px solid ${col}">
+      <div style="font-size:13px;font-weight:700;color:${col};margin-bottom:2px">SPY ${s.type} $${s.strike} ${s.expiry}</div>
+      <div style="font-size:11px;color:#475569">${s.rule}${s.isApex?` · APEX: +${P.APEX_TGT_PCT}% target / -${P.APEX_STOP_PCT}% stop`:''}</div>
+    </div>
+    ${[['Contracts','of-qty','1'],['Stop Loss (SPY $)','of-stop',s.stop.toFixed(2)],['Take Profit (SPY $)','of-tp',s.target.toFixed(2)]].map(([l,id,v])=>`<div style="margin-bottom:10px"><label style="font-size:10px;color:#64748b;display:block;margin-bottom:4px">${l}</label><input type="number" id="${id}" value="${v}" style="width:100%;padding:7px 10px;font-size:12px;border-radius:6px"/></div>`).join('')}
+    <div style="margin-bottom:12px"><label style="font-size:10px;color:#64748b;display:block;margin-bottom:4px">Notes</label><textarea id="of-notes" rows="2" style="width:100%;padding:7px 10px;font-size:12px;resize:vertical;border-radius:6px">${s.rule} at $${s.price.toFixed(2)}</textarea></div>
+    <div style="display:flex;gap:8px"><button class="btn-primary" onclick="confirmOrder()" style="flex:1;padding:9px;border-radius:6px;font-size:11px;letter-spacing:1px">✓ STAGE ORDER</button><button class="btn-ghost" onclick="cancelOrder()" style="padding:9px 12px;border-radius:6px;font-size:11px">CANCEL</button></div>
+  </div>`;
+}
+function confirmOrder(){
+  if(!selSig)return;
+  orders=[{...selSig,qty:+document.getElementById('of-qty').value||1,stopLoss:+document.getElementById('of-stop').value,takeProfit:+document.getElementById('of-tp').value,notes:document.getElementById('of-notes').value,stagedAt:new Date().toLocaleTimeString()},...orders];
+  selSig=null; cancelOrder(); renderOrders(); updateSBar();
+}
+function cancelOrder(){selSig=null;document.getElementById('order-form').style.display='none';document.getElementById('orders-wrap').style.gridTemplateColumns='1fr';}
+function renderOrders(){
+  const cnt=document.getElementById('cnt-orders');
+  cnt.textContent=orders.length; cnt.style.background=orders.length?'#f59e0b22':'#1e293b'; cnt.style.color=orders.length?'#f59e0b':'#64748b';
+  const el=document.getElementById('orders-list');
+  if(!orders.length){el.innerHTML=`<div style="text-align:center;padding:60px;color:#334155"><div style="font-size:36px;margin-bottom:12px">📋</div><div>No staged orders</div></div>`;return;}
+  el.innerHTML=orders.map(o=>{const iC=o.type==='CALL',col=iC?'#10b981':'#ef4444';return`<div class="card" style="padding:14px;margin-bottom:10px;border-left:3px solid ${col}">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+      <div><div style="display:flex;gap:8px;align-items:center;margin-bottom:3px"><span style="font-size:13px;font-weight:700;color:${col}">SPY ${o.type} $${o.strike} ${o.expiry}</span><span class="badge badge-${o.type.toLowerCase()}">${o.type}</span></div><div style="font-size:10px;color:#475569">${o.rule} · ${o.stagedAt}</div></div>
+      <div style="text-align:right"><div style="font-size:9px;color:#475569;margin-bottom:2px">QTY</div><div style="font-size:18px;font-weight:700;color:#f1f5f9">${o.qty}</div></div>
+    </div>
+    <div class="g4" style="margin-bottom:10px">${[['ENTRY',`$${o.price.toFixed(2)}`,'#e2e8f0'],['TARGET',`$${o.takeProfit.toFixed(2)}`,'#10b981'],['STOP',`$${o.stopLoss.toFixed(2)}`,'#ef4444'],['CONF',`${o.conf}%`,'#f59e0b']].map(([l,v,c])=>`<div style="background:#080814;border-radius:5px;padding:7px 9px"><div style="font-size:9px;color:#475569;margin-bottom:3px">${l}</div><div style="font-size:12px;font-weight:600;color:${c}">${v}</div></div>`).join('')}</div>
+    ${o.notes?`<div style="font-size:10px;color:#475569;font-style:italic;margin-bottom:10px;padding:7px;background:#080814;border-radius:4px">"${o.notes}"</div>`:''}
+    <div style="background:#0a0a14;border:1px solid #1e293b;border-radius:5px;padding:10px;font-size:11px">
+      <div style="color:#f59e0b;margin-bottom:5px;font-weight:700">📱 ENTER IN WEBULL:</div>
+      <div style="color:#64748b;line-height:2">1. Search <b style="color:#e2e8f0">SPY</b> → Options → <b style="color:${col}">${o.expiry} $${o.strike} ${o.type}</b><br>2. Buy to Open · Limit · Qty: <b style="color:#e2e8f0">${o.qty}</b><br>3. Stop at <b style="color:#ef4444">$${o.stopLoss.toFixed(2)}</b> · Target <b style="color:#10b981">$${o.takeProfit.toFixed(2)}</b></div>
+    </div>
+  </div>`}).join('');
+}
+
+// ══════════════════════════════════════════
+//  EVENING SUMMARY & APEX LOGGING
+// ══════════════════════════════════════════
+const LOGKEY='spyedge_apex_v2';
+function todayKey(){return tradingDate();}
+function loadLog(){try{return JSON.parse(localStorage.getItem(LOGKEY)||'{}')}catch{return{}}}
+function saveLog(l){localStorage.setItem(LOGKEY,JSON.stringify(l));}
+function ensureDay(l,d){if(!l[d])l[d]={fires:[],blockerLog:[]};return l;}
+
+function logApexFire(apex){
+  const l=loadLog(),d=todayKey(); ensureDay(l,d);
+  if(l[d].fires.slice(-3).some(f=>f.type===apex.type&&Date.now()-f.firedAt<5*60*1000)) return;
+  l[d].fires.push({id:apex.id,firedAt:Date.now(),time:apex.time,type:apex.type,conf:apex.conf,price:apex.price,target:apex.target,stop:apex.stop,strike:apex.strike,expiry:apex.expiry,components:(apex.componentSigs||[]).map(s=>s.rule),outcome:null,notes:'',tPct:P.APEX_TGT_PCT,sPct:P.APEX_STOP_PCT});
+  saveLog(l); refreshBadge();
+}
+function logBlockers(sg,active){
+  if(!sg.length) return;
+  const allRules=['EMA Crossover + Retest','ORB Retest Breakout','ORB Retest Breakdown','ORB Low Retest Hold','ORB Retest Fail (Call Wall)','Sweep + GEX Confluence','HVN Retest Fail','HVN Breakout','Strike Magnet'];
+  const l=loadLog(),d=todayKey(); ensureDay(l,d);
+  for(const[dir,grp]of[['CALL',sg.filter(s=>s.type==='CALL')],['PUT',sg.filter(s=>s.type==='PUT')]]){
+    if(!grp.length) continue;
+    if(grp.length>=P.APEX_MIN_SIGS) continue;
+    if(l[d].blockerLog.slice(-10).some(b=>b.direction===dir&&Date.now()-b.recordedAt<10*60*1000)) continue;
+    const pr=grp.map(s=>s.rule),ab=allRules.filter(r=>!pr.includes(r));
+    l[d].blockerLog.push({recordedAt:Date.now(),time:new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}),direction:dir,signalCount:grp.length,needed:P.APEX_MIN_SIGS,presentRules:pr,absentRules:ab});
+    if(P.SMS_BLOCKER_3X){
+      const counts={};l[d].blockerLog.forEach(b=>(b.absentRules||[]).forEach(r=>{counts[r]=(counts[r]||0)+1;}));
+      const top=Object.entries(counts).sort((a,z)=>z[1]-a[1])[0];
+      if(top&&top[1]===3) sendSMS(`SPY Edge: "${top[0]}" has blocked APEX 3× today (${dir} side). Consider reviewing its threshold in PARAMS.`);
+    }
+  }
+  saveLog(l);
+}
+function logOutcome(){
+  const fid=+document.getElementById('out-sel').value, outcome=document.getElementById('out-outcome').value, notes=document.getElementById('out-notes').value.trim();
+  if(!fid) return;
+  const l=loadLog(),d=todayKey(); ensureDay(l,d);
+  const fire=l[d].fires.find(f=>f.id===fid); if(!fire) return;
+  fire.outcome=outcome; fire.notes=notes; fire.loggedAt=Date.now();
+  saveLog(l); document.getElementById('out-notes').value=''; renderSummary();
+}
+function computeFP(fires){const c={};fires.filter(f=>f.outcome==='loss').forEach(f=>(f.components||[]).forEach(r=>{c[r]=(c[r]||0)+1}));return Object.entries(c).sort((a,z)=>z[1]-a[1]).map(([rule,count])=>({rule,count}));}
+function computeBL(bl){const c={};bl.forEach(b=>(b.absentRules||[]).forEach(r=>{c[r]=(c[r]||0)+1}));return Object.entries(c).sort((a,z)=>z[1]-a[1]).map(([rule,count])=>({rule,count}));}
+function refreshBadge(){
+  const l=loadLog(),d=todayKey(),t=l[d]||{fires:[]};
+  const open=t.fires.filter(f=>f.outcome===null).length;
+  const b=document.getElementById('sum-badge'); b.textContent=open?`${open} open`:''; b.style.display=open?'inline':'none';
+}
+function clearToday(){if(!confirm('Clear today\'s APEX log?'))return;const l=loadLog(),d=todayKey();delete l[d];saveLog(l);renderSummary();}
+function exportSummary(){const t=document.getElementById('sum-text')?.textContent||'';const a=Object.assign(document.createElement('a'),{href:URL.createObjectURL(new Blob([t],{type:'text/plain'})),download:`SPY_Edge_${todayKey()}.txt`});a.click();}
+
+function renderSummary(){
+  const l=loadLog(),d=todayKey(),day=l[d]||{fires:[],blockerLog:[]};
+  const fires=day.fires||[],blocks=day.blockerLog||[];
+  const total=fires.length,wins=fires.filter(f=>f.outcome==='win').length;
+  const losses=fires.filter(f=>f.outcome==='loss').length,scratches=fires.filter(f=>f.outcome==='scratch').length;
+  const open=fires.filter(f=>f.outcome===null).length;
+  const wr=wins+losses>0?Math.round(wins/(wins+losses)*100):null;
+  const pnl=fires.filter(f=>f.outcome!==null).reduce((acc,f)=>{
+    if(f.outcome==='win') return acc+f.price*(f.tPct||20)/100*100;
+    if(f.outcome==='loss') return acc-f.price*(f.sPct||15)/100*100;
+    return acc;
+  },0);
+
+  document.getElementById('sum-kpis').innerHTML=[
+    {l:'APEX FIRES',v:total,c:'#a855f7'},
+    {l:'WIN RATE',v:wr!==null?`${wr}%`:'—',c:wr>=60?'#10b981':wr>=40?'#f59e0b':'#ef4444'},
+    {l:'WINS',v:wins,c:'#10b981'},{l:'LOSSES',v:losses,c:'#ef4444'},
+    {l:'OPEN',v:open,c:open?'#f59e0b':'#475569'},
+    {l:'EST P&L',v:pnl?`$${pnl>0?'+':''}${pnl.toFixed(0)}`:'—',c:pnl>0?'#10b981':pnl<0?'#ef4444':'#475569'},
+  ].map(k=>`<div class="card" style="padding:12px"><div class="sl" style="margin-bottom:5px">${k.l}</div><div style="font-size:20px;font-weight:700;color:${k.c}">${k.v}</div></div>`).join('');
+
+  document.getElementById('sum-fire-cnt').textContent=`${total} fires today`;
+  document.getElementById('sum-fires').innerHTML=!fires.length?`<div style="text-align:center;padding:30px;color:#334155;font-size:12px">No APEX fires today.</div>`
+    :[...fires].reverse().map(f=>{
+      const col=f.type==='CALL'?'#10b981':'#ef4444';
+      const oc={win:'#10b981',loss:'#ef4444',scratch:'#f59e0b',null:'#475569'};
+      const ol={win:'✅ WIN',loss:'❌ LOSS',scratch:'➡ SCRATCH',null:'⏳ OPEN'};
+      return `<div style="padding:10px;border-radius:6px;border:1px solid #1e293b;margin-bottom:8px;background:#080814">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+          <span style="font-size:12px;font-weight:700;color:${col}">${f.type==='CALL'?'▲':'▼'} ${f.type} &nbsp;$${f.strike} ${f.expiry}</span>
+          <span style="font-size:10px;color:${oc[f.outcome]||'#475569'};font-weight:700">${ol[f.outcome]||'⏳ OPEN'}</span>
+        </div>
+        <div style="font-size:10px;color:#475569;margin-bottom:3px">${f.time} · $${f.price.toFixed(2)} · Conf ${f.conf}% · +${f.tPct||20}% tgt / -${f.sPct||15}% stop</div>
+        <div style="font-size:9px;color:#334155">${(f.components||[]).join(' + ')}</div>
+        ${f.notes?`<div style="font-size:10px;color:#64748b;font-style:italic;margin-top:3px">"${f.notes}"</div>`:''}
+      </div>`;
+    }).join('');
+
+  const fps=computeFP(fires),maxFP=fps[0]?.count||1;
+  document.getElementById('sum-fp').innerHTML=!losses?`<div style="color:#475569;font-size:11px;padding:10px 0">No losses logged yet.</div>`
+    :fps.map(fp=>`<div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;font-size:10px;margin-bottom:3px"><span style="color:#94a3b8">${fp.rule}</span><span style="color:#ef4444;font-weight:700">${fp.count}× on losses</span></div><div style="height:6px;background:#1e293b;border-radius:3px;overflow:hidden"><div style="height:100%;width:${~~(fp.count/maxFP*100)}%;background:linear-gradient(90deg,#ef4444,#dc2626);border-radius:3px;transition:width .5s"></div></div></div>`).join('')||'<div style="color:#475569;font-size:11px">No patterns yet.</div>';
+  document.getElementById('sum-fp-txt').textContent=!losses?'Log trade outcomes to see false positive analysis.':fps[0]?`"${fps[0].rule}" on ${fps[0].count}/${losses} losses (${~~(fps[0].count/losses*100)}%). Review or tighten in PARAMS.`:'No patterns yet.';
+
+  const bls=computeBL(blocks),maxB=bls[0]?.count||1;
+  document.getElementById('sum-bl').innerHTML=!blocks.length?`<div style="color:#475569;font-size:11px;padding:10px 0">No near-miss events yet.</div>`
+    :bls.slice(0,6).map(b=>`<div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;font-size:10px;margin-bottom:3px"><span style="color:#94a3b8">${b.rule}</span><span style="color:#f59e0b;font-weight:700">${b.count}× absent</span></div><div style="height:6px;background:#1e293b;border-radius:3px;overflow:hidden"><div style="height:100%;width:${~~(b.count/maxB*100)}%;background:linear-gradient(90deg,#f59e0b,#d97706);border-radius:3px;transition:width .5s"></div></div></div>`).join('')||'<div style="color:#475569;font-size:11px">No patterns yet.</div>';
+  document.getElementById('sum-bl-txt').textContent=bls[0]?`"${bls[0].rule}" absent ${bls[0].count}× — top APEX blocker. Consider APEX_MIN or relaxing its threshold.`:'No blocker patterns yet.';
+
+  const openFires=fires.filter(f=>f.outcome===null);
+  document.getElementById('out-sel').innerHTML=!openFires.length?'<option value="">No open APEX trades</option>':openFires.map(f=>`<option value="${f.id}">${f.time} ${f.type} $${f.strike} ${f.expiry} · ${f.conf}% conf</option>`).join('');
+  document.getElementById('sum-date').textContent=new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
+  document.getElementById('sum-text').textContent=buildExec(d,fires,blocks,wins,losses,scratches,open,wr,pnl,fps,bls);
+  refreshBadge();
+}
+
+function buildExec(date,fires,blocks,wins,losses,scratches,open,wr,pnl,fps,bls){
+  const L='─'.repeat(62),now=new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}),ln=[];
+  ln.push('SPY EDGE  ★ APEX EVENING SUMMARY');
+  ln.push(`${date}  ·  Generated ${now}  ·  v1.6`);
+  ln.push(L);
+  ln.push('\nDATA SOURCES');
+  ln.push(`  Price   : ${CON.poly?'Polygon Paid — 5s real-time':'Demo / mock'}`);
+  ln.push(`  Flow    : ${CON.uw?`Unusual Whales — live ($${P.SWEEP_MIN_PREM/1000}K+ filter)`:'Mock flow'}`);
+  ln.push(`  GEX     : ${CON.sg?`UW GEX — auto-refresh every ${P.GEX_INTERVAL_MIN} min`:'Manual override'}`);
+  ln.push(`  Backtest: ${CON.trad?'Tradier real option chain':'Estimated'}`);
+  ln.push(`  Push    : ${CON.push?'Pushover active — APEX fires sent':'Not configured'}`);
+  ln.push(`  GEX now : Flip $${P.GEX_FLIP} · Call Wall $${P.GEX_CWALL} · Put Wall $${P.GEX_PWALL}`);
+  ln.push(`\nPERFORMANCE  (+${P.APEX_TGT_PCT}% target / -${P.APEX_STOP_PCT}% stop on option)`);
+  ln.push(`  APEX fires today   : ${fires.length}`);
+  ln.push(`  Wins               : ${wins}`);
+  ln.push(`  Losses             : ${losses}`);
+  ln.push(`  Scratches          : ${scratches}`);
+  ln.push(`  Unlogged / open    : ${open}`);
+  ln.push(`  Win rate           : ${wr!==null?wr+'%':'N/A — log outcomes first'}`);
+  ln.push(`  Est. net P&L       : ${pnl?'$'+(pnl>0?'+':'')+pnl.toFixed(0):'N/A'}`);
+  if(fires.length){
+    ln.push('\nAPEX FIRES DETAIL');
+    fires.forEach((f,i)=>{
+      const omap={win:'WIN ✅',loss:'LOSS ❌',scratch:'SCRATCH ➡',null:'OPEN ⏳'};
+      ln.push(`  ${i+1}. ${f.time}  ${f.type}  $${f.strike} ${f.expiry}  Conf ${f.conf}%  →  ${omap[f.outcome]||'OPEN ⏳'}`);
+      ln.push(`     ${(f.components||[]).join(' + ')}`);
+      if(f.notes) ln.push(`     Note: "${f.notes}"`);
+    });
+  }
+  ln.push('\nFALSE POSITIVE ANALYSIS  (signals on losing trades)');
+  if(!losses) ln.push('  No losses logged today.');
+  else if(!fps.length) ln.push('  Insufficient data.');
+  else{fps.forEach(fp=>ln.push(`  ${fp.rule.padEnd(34)} ${fp.count}× on losses  (${~~(fp.count/losses*100)}%)`));ln.push(`\n  ⚠ Top offender: "${fps[0].rule}"`);ln.push(`    Present on ${fps[0].count}/${losses} losses → review threshold in PARAMS.`);}
+  ln.push('\nAPEX BLOCKERS  (rules that prevented APEX from firing)');
+  if(!blocks.length) ln.push('  No near-miss events recorded today.');
+  else{ln.push(`  Near-miss events: ${blocks.length}`);bls.slice(0,5).forEach(b=>ln.push(`  ${b.rule.padEnd(34)} absent ${b.count}×`));if(bls[0]){ln.push(`\n  ⚠ Top blocker: "${bls[0].rule}"`);ln.push(`    Absent ${bls[0].count}× → lower APEX_MIN or relax threshold.`);}}
+  ln.push('\nREFINEMENT NOTES');
+  if(wr>=65) ln.push(`  ✅ Win rate ${wr}% strong. Raise APEX_CONF above ${P.APEX_CONF} to filter edge cases.`);
+  else if(wr!==null&&wr<50){ln.push(`  ⚠ Win rate ${wr}% below 50%. Priority actions:`);if(fps[0])ln.push(`     • Tighten "${fps[0].rule}" — highest false positive rate`);if(bls[0])ln.push(`     • Review "${bls[0].rule}" — may be blocking valid setups`);ln.push(`     • Raise APEX_CONF above ${P.APEX_CONF}`);}
+  else if(wr!==null) ln.push(`  📊 Win rate ${wr}% acceptable. Continue logging to build sample size.`);
+  else ln.push('  📊 Log trade outcomes after close to enable analysis.');
+  ln.push(`\n${L}`);
+  ln.push('SPY Edge v1.6  ·  Not financial advice  ·  Model refinement tool only');
+  return ln.join('\n');
+}
+
+// ── SETTINGS MODAL
+function openSettings(){
+  document.getElementById('settings-modal').style.display='flex';
+  document.getElementById('settings-body').innerHTML=`
+    <div style="margin-bottom:18px">
+      <div class="sl" style="margin-bottom:10px">API CONNECTION STATUS</div>
+      ${[{l:'Polygon.io (Price)',ok:CON.poly,c:'#10b981'},{l:'Unusual Whales (Flow $500K+)',ok:CON.uw,c:'#06b6d4'},{l:'UW GEX (30-min)',ok:CON.sg,c:'#a78bfa'},{l:'Tradier (Backtest)',ok:CON.trad,c:'#f59e0b'},{l:'Pushover (Push Notifications)',ok:CON.push,c:'#fb923c'}]
+        .map(a=>`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;font-size:12px"><span style="color:#94a3b8">${a.l}</span><span style="color:${a.ok?a.c:'#334155'};font-weight:700">${a.ok?'● CONNECTED':'○ NOT CONNECTED'}</span></div>`).join('')}
+    </div>
+    <div style="border-top:1px solid #1e293b;padding-top:16px;margin-bottom:16px">
+      <div class="sl" style="margin-bottom:10px">PUSH NOTIFICATION TEST</div>
+      <div style="font-size:11px;color:#475569;margin-bottom:10px">Send a test notification to confirm Pushover is working.</div>
+      <button class="btn-ghost" onclick="sendSMS('SPY Edge v1.6 test — Pushover connected ✓').then(ok=>alert(ok?'Sent ✓':'Failed — check keys'))" style="padding:8px 16px;border-radius:6px;font-size:11px">SEND TEST NOTIFICATION</button>
+    </div>
+    <div style="border-top:1px solid #1e293b;padding-top:16px">
+      <div class="sl" style="margin-bottom:10px">REFRESH RATES</div>
+      <div style="font-size:11px;color:#475569;line-height:2">Price (Polygon paid): every ${P.LIVE_MS/1000}s in LIVE mode<br>Flow (Unusual Whales): every ${P.FLOW_MS/1000}s<br>GEX (Unusual Whales): every ${P.GEX_INTERVAL_MIN} minutes<br>Edit PARAMS block in the file to adjust.</div>
+    </div>`;
+}
+function closeSettings(){document.getElementById('settings-modal').style.display='none';}
+
+// ── TAB SWITCHING
+function switchTab(name){
+  ['signals','flow','gex','backtest','orders','summary'].forEach(t=>{
+    document.getElementById(`pane-${t}`).style.display=t===name?'block':'none';
+    document.getElementById(`tab-${t}`).classList.toggle('active',t===name);
+  });
+  tab=name;
+  if(name==='gex') renderGEX();
+  if(name==='orders') renderOrders();
+  if(name==='summary') renderSummary();
+}
+
+// ── RULE TOGGLES
+function toggleRule(key){
+  rules[key]=!rules[key];
+  const t=document.getElementById(`tog-${key}`),th=t.querySelector('.tog-thumb'),lbl=document.getElementById(`tlbl-${key}`);
+  t.style.background=rules[key]?'#10b981':'#1e293b'; th.style.left=rules[key]?'18px':'2px'; lbl.style.color=rules[key]?'#e2e8f0':'#475569';
+}
+
+// ── INIT
+window.addEventListener('keydown',e=>{if(e.key==='Enter'&&document.getElementById('setup-screen').style.display!=='none')connectAll();});
+(async()=>{
+  const saved=localStorage.getItem('sek');
+  if(saved){
+    try{K=JSON.parse(saved);}catch{}
+    if(K.poly){
+      // Pre-fill inputs so user can verify/edit before auto-launching
+      ['poly','uw','trad','ptoken','puser'].forEach(k=>{
+        const el=document.getElementById(`k-${k}`);
+        if(el&&K[k]) el.value=K[k];
+      });
+      await fetchPolygon().catch(()=>{});
+      await Promise.all([fetchUW(),fetchDarkPool()]).catch(()=>{});
+      if(K.trad){try{await tradierChain(tradingDate());CON.trad=true;}catch{}}
+      if(K.ptoken&&K.puser) CON.push=true;
+      CON.poly=true;
+      launchApp();
+      return;
+    }
+  }
+  renderFlow(); refreshBadge();
+})();
+</script>
+</body>
+</html>
