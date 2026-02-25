@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-<title>SPY Edge v1.6</title>
+<title>SPY Edge v1.7</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&display=swap');
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -175,15 +175,13 @@ button{font-family:inherit;cursor:pointer}
     <div id="pane-signals">
       <div class="card" style="padding:14px;margin-bottom:16px">
         <div style="display:flex;gap:18px;align-items:center;flex-wrap:wrap;margin-bottom:10px">
-          <span class="sl">RULES</span>
-          <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:11px"><div class="tog" id="tog-ema" onclick="toggleRule('ema')" style="background:#10b981"><div class="tog-thumb" style="left:18px"></div></div><span id="tlbl-ema" style="color:#e2e8f0">EMA Crossover + Retest</span></label>
-          <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:11px"><div class="tog" id="tog-orb" onclick="toggleRule('orb')" style="background:#10b981"><div class="tog-thumb" style="left:18px"></div></div><span id="tlbl-orb" style="color:#e2e8f0">ORB Retest Break/Fail</span></label>
-          <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:11px"><div class="tog" id="tog-sw"  onclick="toggleRule('sw')"  style="background:#10b981"><div class="tog-thumb" style="left:18px"></div></div><span id="tlbl-sw"  style="color:#e2e8f0">Sweep + GEX</span></label>
-          <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:11px"><div class="tog" id="tog-hvn" onclick="toggleRule('hvn')" style="background:#10b981"><div class="tog-thumb" style="left:18px"></div></div><span id="tlbl-hvn" style="color:#e2e8f0">HVN Retest Break/Fail</span></label>
-          <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:11px"><div class="tog" id="tog-dd"  onclick="toggleRule('dd')"  style="background:#10b981"><div class="tog-thumb" style="left:18px"></div></div><span id="tlbl-dd"  style="color:#e2e8f0">Strike Magnet</span></label>
+          <span class="sl">SIGNALS</span>
+          <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:11px"><div class="tog" id="tog-ema" onclick="toggleRule('ema')" style="background:#10b981"><div class="tog-thumb" style="left:18px"></div></div><span id="tlbl-ema" style="color:#e2e8f0">Momentum</span></label>
+          <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:11px"><div class="tog" id="tog-sw"  onclick="toggleRule('sw')"  style="background:#10b981"><div class="tog-thumb" style="left:18px"></div></div><span id="tlbl-sw"  style="color:#e2e8f0">Level Reaction</span></label>
+          <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:11px"><div class="tog" id="tog-dd"  onclick="toggleRule('dd')"  style="background:#10b981"><div class="tog-thumb" style="left:18px"></div></div><span id="tlbl-dd"  style="color:#e2e8f0">Flow Conviction</span></label>
           <button class="btn-primary" onclick="refresh()" style="margin-left:auto;padding:6px 16px;border-radius:6px;font-size:11px;letter-spacing:1px">SCAN NOW</button>
         </div>
-        <div style="font-size:10px;color:#334155;border-top:1px solid #1a1a2e;padding-top:8px">15m EMA crossover = trend · ORB active first 90min · RSI 25-75 · Vol rising (5m · 10am-3pm) · Weighted APEX: EMA 30pts · Sweep 25pts · ORB 20pts · HVN 15pts · Delta 10pts · Min 2 signals</div>
+        <div style="font-size:10px;color:#334155;border-top:1px solid #1a1a2e;padding-top:8px">Momentum 35pts · Level Reaction 35pts · Flow Conviction 30pts · Min 2 signals · APEX threshold ${P.APEX_CONF}% · Boosters: GEX +${P.BOOST_GEX_REGIME} · Confluence +${P.BOOST_CONFLUENCE} · Flow accel +${P.BOOST_FLOW_ACCEL}</div>
       </div>
       <div id="signals-list"><div style="text-align:center;padding:60px;color:#334155"><div style="font-size:36px;margin-bottom:12px">⚡</div><div>Click SCAN NOW or enable LIVE</div></div></div>
     </div>
@@ -360,87 +358,51 @@ button{font-family:inherit;cursor:pointer}
    PARAMETERS — edit these freely, logic is below
 ═══════════════════════════════════════════════════════ */
 const P = {
-  // EMA
-  EMA_TOUCH: 0.40,        // $ proximity to count as retest of 8 EMA
-  EMA_STOP: 0.50, EMA_TGT: 2.50,
-  EMA_RETEST8_BOOST: 5,   // conf boost for retest/fail of 8 EMA
-  EMA_RETEST21_BOOST: 2,  // conf boost for retest/fail of 21 EMA then recross
-  // ORB
-  ORB_CANDLES: 6, ORB_STOP: 0.50, ORB_TGT: 3.00, ORB_WALL_DIST: 1.00,
-  ORB_WINDOW_MINS: 90,    // ORB signal only fires within 90 min of market open
-  ORB_EMA_OVERLAP: 0.50,  // if ORB level and 8 EMA are within $0.50, skip ORB (avoid double-count)
-  // FLOW
-  SWEEP_MIN_PREM: 250000,
-  SWEEP_MIN_COUNT: 2, GEX_DIST: 1.50,
-  // HVN
-  HVN_PROX: 0.40, HVN_WICK: 0.30,
-  HVN_EMA_ALIGN_BOOST: 5,
-  // FIB
-  FIB_PROX: 0.50,
-  // DELTA
-  DELTA_RATIO: 1.30, DELTA_LOOKBACK: 6,
-  // RSI
-  RSI_PERIOD: 14,
-  RSI_MID: 50,
-  RSI_OB: 75,
-  RSI_OS: 25,
-  RSI_HOUR_START: 10,
-  RSI_HOUR_END: 15,
-  // VOLUME — pure 5m candle comparison
-  VOL_LOOKBACK_5M: 6,     // compare current 5m vol to avg of last 6 x 5m candles
-  VOL_MIN_RATIO: 0.80,    // current candle must be >= 80% of the 6-candle avg
-  // GEX
+  // ── MOMENTUM
+  MOM_EMA_TOUCH: 0.40,      // 5m wick proximity to 8 EMA counts as retest
+  MOM_EMA_STOP: 0.50, MOM_EMA_TGT: 2.50,
+  // ── LEVEL REACTION
+  LVL_GEX_PROX: 1.50,       // within $1.50 of GEX wall or flip = "at level"
+  LVL_HVN_PROX: 0.40,       // within $0.40 of HVN = "at level"
+  LVL_DP_PROX: 0.75,        // within $0.75 of dark pool cluster = "at level"
+  LVL_STOP: 0.75, LVL_TGT: 3.00,
+  // ── FLOW CONVICTION
+  FLOW_SWEEP_MIN: 250000,    // min premium per qualifying print
+  FLOW_SWEEP_COUNT: 2,       // min sweeps for high conviction
+  FLOW_MOM_MINS: 15,         // lookback window for flow momentum
+  FLOW_MOM_THRESH: 0.65,     // 65%+ call/put ratio = directional bias
+  FLOW_SM_MIN_PRINTS: 2,     // min prints at same strike for magnet
+  FLOW_SM_MINS: 15,          // lookback for strike magnet
+  FLOW_STOP: 1.00, FLOW_TGT: 2.50,
+  // ── RSI
+  RSI_PERIOD: 14, RSI_MID: 50, RSI_OB: 75, RSI_OS: 25,
+  RSI_HOUR_START: 10, RSI_HOUR_END: 15,
+  // ── VOLUME
+  VOL_LOOKBACK_5M: 6, VOL_MIN_RATIO: 0.80,
+  // ── GEX defaults (overwritten by flow GEX)
   GEX_FLIP: 684.00, GEX_CWALL: 700.00, GEX_PWALL: 670.00,
-  GEX_REGIME_BOOST: 5,
-  // DARK POOL
-  DP_MIN_PREMIUM: 1000000,
-  DP_PROX: 0.75,
-  DP_ORB_BOOST: 5,
-  DP_EMA_BOOST: 5,
-  DP_GEX_BOOST: 3,
-  DP_LOOKBACK_DAYS: 5,
-  // FLOW-BASED GEX PROXY
-  FLOW_GEX_EXPIRY_DAYS: 7,   // only consider prints expiring within 7 days
-  FLOW_GEX_STRIKE_PCT: 0.03, // only strikes within 3% of current price
-  FLOW_GEX_MIN_PREM: 250000, // minimum print premium for GEX proxy calculation
-  FLOW_GEX_MIN_PRINTS: 3,    // minimum qualifying prints before computing proxy
-  // FLOW MOMENTUM
-  FLOW_MOM_MINS: 15,         // lookback window for flow momentum (minutes)
-  FLOW_MOM_BOOST: 5,         // conf boost to Sweep+GEX when flow momentum aligns
-  FLOW_MOM_THRESHOLD: 0.65,  // ratio threshold (65% calls = bullish, 35% = bearish)
-  // STRIKE MAGNET
-  SM_MINS: 15,               // lookback window for strike magnet clustering
-  SM_MIN_PRINTS: 2,          // minimum prints at same strike to trigger
-  SM_STRIKE_PCT: 0.03,       // strike must be within 3% of price
-  // APEX — weighted scoring
-  APEX_WEIGHTS: {
-    'EMA Crossover + Retest':      28,
-    'Sweep + GEX Confluence':      25,
-    'ORB Retest Breakout':         18,
-    'ORB Retest Breakdown':        18,
-    'ORB Low Retest Hold':         18,
-    'ORB Retest Fail (Call Wall)': 18,
-    'HVN Retest Fail':             15,
-    'HVN Breakout':                15,
-    'Strike Magnet':               14,
-  },
-  APEX_WEIGHTS_LATE: {        // post-ORB window: redistribute ORB weight
-    'EMA Crossover + Retest':      35,
-    'Sweep + GEX Confluence':      28,
-    'HVN Retest Fail':             20,
-    'HVN Breakout':                20,
-    'Strike Magnet':               17,
-  },
-  APEX_TOTAL_WEIGHT: 100,   // weights sum to 100 — score = weighted sum / 100 * 100
-  APEX_MIN_SIGS: 2,         // minimum 2 signals must fire before APEX can trigger
-  APEX_CONF: 78,
+  // ── DARK POOL
+  DP_MIN_PREMIUM: 1000000, DP_PROX: 0.75, DP_LOOKBACK_DAYS: 5,
+  // ── FLOW GEX PROXY
+  FLOW_GEX_EXPIRY_DAYS: 7, FLOW_GEX_STRIKE_PCT: 0.03,
+  FLOW_GEX_MIN_PREM: 250000, FLOW_GEX_MIN_PRINTS: 3,
+  // ── APEX WEIGHTS & BOOSTERS
+  APEX_W_MOM:  35,           // Momentum weight
+  APEX_W_LVL:  35,           // Level Reaction weight
+  APEX_W_FLOW: 30,           // Flow Conviction weight
+  BOOST_GEX_REGIME:   5,     // price on correct side of flip
+  BOOST_CONFLUENCE:   5,     // 2+ level types agree at same price
+  BOOST_FLOW_ACCEL:   5,     // flow ratio accelerating in signal direction
+  APEX_CONF: 80,             // threshold % to fire APEX alert
+  APEX_MIN_SIGS: 2,          // min signals active before APEX can fire
+  APEX_TGT_PCT: 20, APEX_STOP_PCT: 15,
   APEX_TGT_MOVE: 4.00, APEX_STOP_BUF: 0.75,
-  APEX_TGT_PCT: 20,
-  APEX_STOP_PCT: 15,
-  SMS_APEX: true,
-  SMS_BLOCKER_3X: true,
-  LIVE_MS: 5000,
-  FLOW_MS: 10000,
+  SMS_APEX: true, SMS_BLOCKER_3X: false,
+  LIVE_MS: 5000, FLOW_MS: 10000,
+  // ── LEGACY (kept for backtest/orders compat)
+  SWEEP_MIN_PREM: 250000, GEX_DIST: 1.50,
+  DP_EMA_BOOST: 5, DP_ORB_BOOST: 5, DP_GEX_BOOST: 3, GEX_REGIME_BOOST: 5,
+  HVN_EMA_ALIGN_BOOST: 5, ORB_WINDOW_MINS: 90,
   GEX_INTERVAL_MIN: 30,
 };
 
@@ -455,7 +417,7 @@ let c5=[], c15=[];
 let price=587.13, chg=0, meta={};
 let uwFlow=[], sgGEX=null, dpLevels=[];
 let sigs=[], orders=[], selSig=null, tab='signals';
-let rules={ ema:true, orb:true, sw:true, hvn:true, dd:true };
+let rules={ ema:true, sw:true, dd:true }; // ema=Momentum, sw=Level Reaction, dd=Flow Conviction
 let apexBT=false, lastGEXt=0;
 
 // ── MOCK DATA
@@ -519,328 +481,175 @@ function volRising(c5){
   return cur>=avg*P.VOL_MIN_RATIO;
 }
 
-// Flow Momentum — call vs put premium ratio over last N minutes
-// Returns {bull, bear, ratio} — bull=true when calls dominate by P.FLOW_MOM_THRESHOLD
-function flowMomentum15m(fl){
-  const cutoff=Date.now()-P.FLOW_MOM_MINS*60000;
-  const recent=fl.filter(f=>f.ts&&f.ts>=cutoff);
-  if(recent.length<3) return{bull:false,bear:false,ratio:0.5};
-  const callPrem=recent.filter(f=>f.type==='CALL').reduce((a,f)=>a+f.premium,0);
-  const putPrem =recent.filter(f=>f.type==='PUT' ).reduce((a,f)=>a+f.premium,0);
-  const total=callPrem+putPrem;
-  if(!total) return{bull:false,bear:false,ratio:0.5};
-  const ratio=callPrem/total;
-  return{bull:ratio>=P.FLOW_MOM_THRESHOLD,bear:ratio<=(1-P.FLOW_MOM_THRESHOLD),ratio};
+
+// ══════════════════════════════════════════
+//  v1.7 THREE-SIGNAL ENGINE
+//  Signal 1: MOMENTUM    — EMA trend + 5m retest
+//  Signal 2: LEVEL REACT — GEX-physics-aware level reaction
+//  Signal 3: FLOW CONV   — sweeps + clustering + momentum ratio
+// ══════════════════════════════════════════
+
+// GEX wall velocity tracking — stores last 8 applyFlowGEX results
+let gexHistory=[];
+function trackGEXVelocity(cwall,pwall,flip){
+  gexHistory.push({ts:Date.now(),cwall,pwall,flip});
+  if(gexHistory.length>8) gexHistory.shift();
+}
+function gexWallVelocity(){
+  if(gexHistory.length<2) return{callV:0,putV:0};
+  const old=gexHistory[0],cur=gexHistory.at(-1);
+  return{callV:cur.cwall-old.cwall,putV:cur.pwall-old.pwall};
 }
 
-// Strike Magnet — clustering of ≥2 large prints at same strike within 15 min
-// Returns signal object {type, strike, count, totalPrem} or null
-function detectStrikeMagnet(fl,spyP,now){
-  const cutoff=Date.now()-P.SM_MINS*60000;
-  const band=spyP*P.SM_STRIKE_PCT;
-  const recent=fl.filter(f=>f.ts&&f.ts>=cutoff&&f.premium>=P.SWEEP_MIN_PREM&&Math.abs(f.strike-spyP)<=band);
-  if(recent.length<P.SM_MIN_PRINTS) return null;
-  const byStrike={};
-  for(const f of recent){
-    if(!byStrike[f.strike]) byStrike[f.strike]={calls:0,puts:0,totalPrem:0,count:0};
-    byStrike[f.strike].count++;
-    byStrike[f.strike].totalPrem+=f.premium;
-    if(f.type==='CALL') byStrike[f.strike].calls++;
-    else byStrike[f.strike].puts++;
+// ── SIGNAL 1: MOMENTUM
+function scoreMomentum(c5,c15){
+  if(c5.length<22||c15.length<4) return{active:false,direction:null,score:0,detail:'Insufficient data',subItems:[],entry:price,target:price+P.MOM_EMA_TGT,stop:price-P.MOM_EMA_STOP};
+  const e8=ema(c5,8),e21=ema(c5,21),e8b=ema(c15,8),e21b=ema(c15,21);
+  const L=c5.at(-1),Pv=c5.at(-2),L15=c15.at(-1);
+  const e8v=e8.at(-1).v,e8bv=e8b.at(-1).v,e21bv=e21b.at(-1).v;
+  const e8bPrev=e8b.at(-2)?.v??e8bv,e21bPrev=e21b.at(-2)?.v??e21bv;
+  const rsiVal=rsi(c5),volOk=volRising(c5);
+  const vwv=vwap(c5).at(-1).v;
+  const bullCross=e8bPrev<=e21bPrev&&e8bv>e21bv;
+  const bearCross=e8bPrev>=e21bPrev&&e8bv<e21bv;
+  const bullStack=e8bv>e21bv&&L15.c>e8bv;
+  const bearStack=e8bv<e21bv&&L15.c<e8bv;
+  const isBull=bullCross||bullStack, isBear=bearCross||bearStack;
+  if(!isBull&&!isBear) return{active:false,direction:null,score:20,detail:'No 15m trend — EMAs flat',subItems:['15m EMAs not aligned'],entry:price,target:price,stop:price};
+  const dir=isBull?'CALL':'PUT';
+  let score=bullCross||bearCross?55:40;
+  const items=[];
+  items.push(bullCross?'15m bullish crossover':bearCross?'15m bearish crossover':isBull?'15m bullish stack':'15m bearish stack');
+  const retest8=(isBull)?(Math.abs(L.l-e8v)<P.MOM_EMA_TOUCH&&L.c>e8v&&L.c>Pv.c):(Math.abs(L.h-e8v)<P.MOM_EMA_TOUCH&&L.c<e8v&&L.c<Pv.c);
+  if(retest8){score+=20;items.push('5m retest of 8 EMA confirmed');}
+  const rsiOk=isBull?(rsiVal>P.RSI_MID&&rsiVal<P.RSI_OB):(rsiVal<P.RSI_MID&&rsiVal>P.RSI_OS);
+  if(rsiOk){score+=15;items.push(`RSI ${rsiVal.toFixed(0)} aligned`);}else items.push(`RSI ${rsiVal.toFixed(0)} — not ideal`);
+  if(volOk){score+=10;items.push('Volume rising');}
+  const abVwap=L.c>vwv;
+  if((isBull&&abVwap)||(isBear&&!abVwap)){score+=5;items.push('VWAP aligned');}
+  score=Math.min(score,100);
+  const active=score>=55&&rsiOk;
+  const entry=L.c;
+  return{active,direction:dir,score,detail:`${items[0]}${retest8?' · Retest confirmed':''}${rsiOk?` · RSI ${rsiVal.toFixed(0)}`:''}`,subItems:items,entry,target:isBull?entry+P.MOM_EMA_TGT:entry-P.MOM_EMA_TGT,stop:isBull?entry-P.MOM_EMA_STOP:entry+P.MOM_EMA_STOP};
+}
+
+// ── SIGNAL 2: LEVEL REACTION (GEX-physics aware)
+function scoreLevelReaction(c5,gx){
+  if(c5.length<4) return{active:false,direction:null,score:0,detail:'Insufficient data',subItems:[],entry:price,target:price,stop:price,levelName:'—'};
+  const L=c5.at(-1),prevC=c5.at(-2);
+  const abFlip=L.c>gx.flipLevel;
+  const posGEX=abFlip,negGEX=!abFlip;
+  const vel=gexWallVelocity();
+  const levels=[];
+  const cwall=gx.keyLevels.find(l=>l.type==='call wall');
+  const pwall=gx.keyLevels.find(l=>l.type==='put wall');
+  const flipDist=Math.abs(L.c-gx.flipLevel);
+  if(cwall&&Math.abs(L.c-cwall.price)<P.LVL_GEX_PROX) levels.push({price:cwall.price,type:'GEX Call Wall',dist:Math.abs(L.c-cwall.price),side:'above'});
+  if(pwall&&Math.abs(L.c-pwall.price)<P.LVL_GEX_PROX) levels.push({price:pwall.price,type:'GEX Put Wall',dist:Math.abs(L.c-pwall.price),side:'below'});
+  if(flipDist<P.LVL_GEX_PROX) levels.push({price:gx.flipLevel,type:'GEX Flip',dist:flipDist,side:abFlip?'below':'above'});
+  for(const h of hvn(c5)){const d=Math.abs(L.c-h);if(d<P.LVL_HVN_PROX) levels.push({price:h,type:'HVN',dist:d,side:L.c>h?'above':'below'});}
+  for(const dp of dpLevels){const d=Math.abs(L.c-dp.price);if(d<P.LVL_DP_PROX) levels.push({price:dp.price,type:`DP $${(dp.totalPremium/1e6).toFixed(0)}M`,dist:d,side:L.c>dp.price?'above':'below',prem:dp.totalPremium});}
+  if(!levels.length) return{active:false,direction:null,score:25,detail:'No significant level nearby',subItems:['Price in open air — wait for level'],entry:price,target:price,stop:price,levelName:'—'};
+  levels.sort((a,b)=>a.dist-b.dist);
+  const nearest=levels[0];
+  let score=Math.max(Math.round((1-nearest.dist/2)*40),5),dir=null,isBreakout=false;
+  const items=[`At ${nearest.type} $${nearest.price.toFixed(2)} (${nearest.dist.toFixed(2)} away)`];
+  const abLevel=L.c>nearest.price;
+  const rejecting=abLevel?(L.h>nearest.price&&L.c<nearest.price&&L.c<prevC.c):(L.l<nearest.price&&L.c>nearest.price&&L.c>prevC.c);
+  const breaking=abLevel?(L.c>nearest.price&&prevC.c<nearest.price):(L.c<nearest.price&&prevC.c>nearest.price);
+  if(posGEX){
+    items.push('Positive GEX — fade mode');
+    dir=nearest.side==='above'?'PUT':'CALL';
+    if(rejecting){score+=25;items.push('Rejection candle confirmed');}
+    else if(nearest.dist<0.75){score+=15;items.push('Touching level');}
+  } else {
+    items.push('Negative GEX — breakout mode');
+    isBreakout=true;
+    dir=nearest.side==='above'?'CALL':'PUT';
+    if(breaking){score+=30;items.push('Broke through level — acceleration expected');}
+    else if(nearest.dist<0.75){score+=10;items.push('Pressing into level');}
   }
-  // Find highest-premium cluster with clear directional bias
-  const dominant=Object.entries(byStrike)
-    .filter(([,d])=>d.count>=P.SM_MIN_PRINTS)
-    .sort((a,b)=>b[1].totalPrem-a[1].totalPrem)[0];
-  if(!dominant) return null;
-  const[strike,data]=dominant;
-  const s=+strike;
-  if(data.calls>=P.SM_MIN_PRINTS&&data.puts===0)
-    return{type:'CALL',strike:s,count:data.count,totalPrem:data.totalPrem,now};
-  if(data.puts>=P.SM_MIN_PRINTS&&data.calls===0)
-    return{type:'PUT',strike:s,count:data.count,totalPrem:data.totalPrem,now};
+  if(dir==='CALL'&&vel.callV<-0.50){score+=10;items.push(`Call wall compressing ($${vel.callV.toFixed(1)})`);}
+  if(dir==='PUT'&&vel.putV>0.50){score+=10;items.push(`Put wall compressing (+$${vel.putV.toFixed(1)})`);}
+  const confluent=levels.filter(l=>Math.abs(l.price-nearest.price)<1.50);
+  if(confluent.length>=2){score+=10;items.push(`Level confluence: ${confluent.map(l=>l.type).join(' + ')}`);}
+  score=Math.min(score,100);
+  const active=score>=50&&dir!==null;
+  const entry=L.c;
+  return{active,direction:dir,score,detail:`${posGEX?'Pos GEX':'Neg GEX'} · ${nearest.type} $${nearest.price.toFixed(2)} · ${isBreakout?'Breakout':'Fade'}`,subItems:items,entry,target:dir==='CALL'?entry+P.LVL_TGT:entry-P.LVL_TGT,stop:dir==='CALL'?entry-P.LVL_STOP:entry+P.LVL_STOP,levelName:nearest.type,levelPrice:nearest.price,isBreakout,posGEX};
+}
+
+// ── SIGNAL 3: FLOW CONVICTION
+function scoreFlowConviction(fl){
+  if(!fl.length) return{active:false,direction:null,score:0,detail:'No flow data',subItems:[],entry:price,target:price,stop:price,ratio:0.5};
+  const now=Date.now(),cutoff=now-P.FLOW_MOM_MINS*60000;
+  const recent=fl.filter(f=>f.ts&&f.ts>=cutoff);
+  const callPrem=recent.filter(f=>f.type==='CALL').reduce((a,f)=>a+f.premium,0);
+  const putPrem=recent.filter(f=>f.type==='PUT').reduce((a,f)=>a+f.premium,0);
+  const total=callPrem+putPrem||1;
+  const ratio=callPrem/total;
+  const isBullFlow=ratio>=P.FLOW_MOM_THRESH, isBearFlow=ratio<=(1-P.FLOW_MOM_THRESH);
+  let score=0,dir=null;
+  const items=[];
+  if(isBullFlow){score+=30;dir='CALL';items.push(`${Math.round(ratio*100)}% call premium (15m)`);}
+  else if(isBearFlow){score+=30;dir='PUT';items.push(`${Math.round((1-ratio)*100)}% put premium (15m)`);}
+  else items.push(`Mixed flow ${Math.round(ratio*100)}/${Math.round((1-ratio)*100)} C/P`);
+  const sweeps=fl.filter(f=>f.sweep&&f.premium>=P.FLOW_SWEEP_MIN);
+  const domSweeps=(isBullFlow?sweeps.filter(f=>f.type==='CALL'):sweeps.filter(f=>f.type==='PUT')).length;
+  if(domSweeps>=P.FLOW_SWEEP_COUNT){score+=25;items.push(`${domSweeps} ${dir==='CALL'?'call':'put'} sweeps`);}
+  else if(domSweeps===1){score+=10;items.push(`1 ${dir==='CALL'?'call':'put'} sweep`);}
+  const smCutoff=now-P.FLOW_SM_MINS*60000;
+  const smBand=price*0.03;
+  const smPrints=fl.filter(f=>f.ts>=smCutoff&&f.premium>=P.FLOW_SWEEP_MIN&&Math.abs(f.strike-price)<=smBand);
+  const sc={};for(const f of smPrints){if(!sc[f.strike])sc[f.strike]={c:0,p:0,tot:0,prem:0};sc[f.strike][f.type==='CALL'?'c':'p']++;sc[f.strike].tot++;sc[f.strike].prem+=f.premium;}
+  const dominated=Object.entries(sc).find(([,d])=>d.tot>=P.FLOW_SM_MIN_PRINTS&&(d.c===0||d.p===0));
+  if(dominated){const[s,d]=dominated;const md=d.c>0?'CALL':'PUT';if(!dir||dir===md){score+=20;dir=md;items.push(`Strike magnet $${s} — ${d.tot} prints $${(d.prem/1e6).toFixed(1)}M`);}}
+  const tf=(callPrem+putPrem)/1e6;
+  if(tf>5){score+=10;items.push(`$${tf.toFixed(1)}M total 15m flow`);}else if(tf>2){score+=5;items.push(`$${tf.toFixed(1)}M 15m flow`);}
+  score=Math.min(score,100);
+  const active=score>=50&&dir!==null&&(isBullFlow||isBearFlow);
+  const entry=price;
+  return{active,direction:dir,score,detail:items[0]||'Flow building',subItems:items,entry,target:dir==='CALL'?entry+P.FLOW_TGT:entry-P.FLOW_TGT,stop:dir==='CALL'?entry-P.FLOW_STOP:entry+P.FLOW_STOP,ratio,callPrem,putPrem};
+}
+
+// ── APEX ENGINE
+let lastApexFiredAt=0,lastApexKey='';
+function detectApex(mom,lvl,flow,gx){
+  for(const dir of['CALL','PUT']){
+    const aligned=[mom,lvl,flow].filter(s=>s.active&&s.direction===dir);
+    if(aligned.length<P.APEX_MIN_SIGS) continue;
+    const mS=mom.direction===dir?mom.score:0;
+    const lS=lvl.direction===dir?lvl.score:0;
+    const fS=flow.direction===dir?flow.score:0;
+    let comp=Math.round((mS*P.APEX_W_MOM+lS*P.APEX_W_LVL+fS*P.APEX_W_FLOW)/100);
+    const boosts=[];
+    const abFlip=price>gx.flipLevel;
+    const gexOk=dir==='CALL'?!abFlip:abFlip; // neg GEX favors momentum/breakout
+    if(gexOk){comp+=P.BOOST_GEX_REGIME;boosts.push(`GEX+${P.BOOST_GEX_REGIME}`);}
+    if(lvl.active&&lvl.direction===dir&&(lvl.subItems||[]).some(i=>i.includes('confluence'))){comp+=P.BOOST_CONFLUENCE;boosts.push(`Confluence+${P.BOOST_CONFLUENCE}`);}
+    if(flow.active&&flow.direction===dir){const accel=dir==='CALL'?flow.ratio>0.72:flow.ratio<0.28;if(accel){comp+=P.BOOST_FLOW_ACCEL;boosts.push(`FlowAccel+${P.BOOST_FLOW_ACCEL}`);}}
+    comp=Math.min(comp,99);
+    if(comp<P.APEX_CONF) continue;
+    const key=`${dir}-${Math.round(price/2)*2}`;
+    if(key===lastApexKey&&Date.now()-lastApexFiredAt<5*60*1000) continue;
+    const entry=aligned.reduce((a,s)=>a+s.entry,0)/aligned.length;
+    const target=dir==='CALL'?entry+P.APEX_TGT_MOVE:entry-P.APEX_TGT_MOVE;
+    const stop=dir==='CALL'?entry-P.APEX_STOP_BUF:entry+P.APEX_STOP_BUF;
+    const now=new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
+    return{id:Date.now(),type:dir,isApex:true,conf:comp,price:entry,target,stop,strike:Math.round(entry),expiry:'1DTE',time:now,boosts,momScore:mS,lvlScore:lS,flowScore:fS,detail:`Momentum ${mS}% · Level ${lS}% · Flow ${fS}%${boosts.length?' · '+boosts.join(' · '):''}`,componentSigs:aligned,rule:'★ APEX CONFLUENCE',levelName:lvl.levelName||'—',isBreakout:lvl.isBreakout};
+  }
   return null;
 }
 
-// ── SIGNAL ENGINE
-function detectSigs(c5,c15,fl,gx){
-  if(c5.length<22||c15.length<4) return[];
-  const sig=[];
-  const e8=ema(c5,8),e21=ema(c5,21),e8b=ema(c15,8),e21b=ema(c15,21);
-  const vw=vwap(c5),hvns=hvn(c5),ob=orb(c5),dlt=delta(c5,fl);
-  const fibLvls=fibs(c5);
-  const fib=(p)=>nearFib(fibLvls,p)?5:0;
-
-  // Current candles
-  const L=c5.at(-1),Pv=c5.at(-2),L15=c15.at(-1),P15=c15.at(-2);
-  const e8v=e8.at(-1).v,e21v=e21.at(-1).v;
-  const e8bv=e8b.at(-1).v,e21bv=e21b.at(-1).v;
-  const e8bPrev=e8b.at(-2)?.v??e8bv, e21bPrev=e21b.at(-2)?.v??e21bv;
-  const vwv=vw.at(-1).v;
-
-  // RSI & Volume (pure 5m candle comparison)
-  const rsiVal=rsi(c5);
-  const volOk=volRising(c5);
-  const rsiCallOk=rsiVal>P.RSI_MID&&rsiVal<P.RSI_OB;
-  const rsiPutOk =rsiVal<P.RSI_MID&&rsiVal>P.RSI_OS;
-  const rsiBst=3;
-
-  // ORB timing — only fire within 90 min of market open (9:30 ET)
-  const etNow=new Date(new Date().toLocaleString('en-US',{timeZone:'America/New_York'}));
-  const etMins=etNow.getHours()*60+etNow.getMinutes();
-  const orbActive=etMins>=570&&etMins<(570+P.ORB_WINDOW_MINS);
-  // ORB+EMA overlap guard — skip ORB if level and 8 EMA are too close (avoid double-count)
-  const orbHighEmaOverlap=ob?Math.abs(ob.high-e8v)<P.ORB_EMA_OVERLAP:false;
-  const orbLowEmaOverlap =ob?Math.abs(ob.low -e8v)<P.ORB_EMA_OVERLAP:false;
-
-  // Flow bias
-  const bsw=fl.filter(f=>f.type==='CALL'&&f.sweep).length;
-  const psw=fl.filter(f=>f.type==='PUT'&&f.sweep).length;
-  const bias=bsw>psw?'bullish':psw>bsw?'bearish':'neutral';
-
-  // Key booleans
-  const abFlip=L.c>gx.flipLevel, abVwap=L.c>vwv;
-  const now=new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
-  const push=(s)=>sig.push(s);
-
-  // GEX regime boost — applied in detectApex
-  // stored on each signal so apex can check alignment
-  const gexBull=abFlip; // positive GEX + above flip = bullish regime
-  const gexBear=!abFlip;
-
-  // ── 15m EMA CROSSOVER direction (primary trend)
-  const emaBullCross=e8bPrev<=e21bPrev&&e8bv>e21bv; // 8 just crossed above 21 on 15m
-  const emaBearCross=e8bPrev>=e21bPrev&&e8bv<e21bv; // 8 just crossed below 21 on 15m
-  const emaBullStack=e8bv>e21bv&&L15.c>e8bv;       // 8 above 21, price above 8
-  const emaBearStack=e8bv<e21bv&&L15.c<e8bv;       // 8 below 21, price below 8
-  const emaBull=emaBullCross||emaBullStack;
-  const emaBear=emaBearCross||emaBearStack;
-
-  // 5m retest boosts
-  // Retest & fail of 8 EMA on 5m (+5): price touched 8 EMA and rejected
-  const retest8Bull=Math.abs(L.l-e8v)<P.EMA_TOUCH&&L.c>e8v&&L.c>Pv.c; // wick to 8, closed above
-  const retest8Bear=Math.abs(L.h-e8v)<P.EMA_TOUCH&&L.c<e8v&&L.c<Pv.c; // wick to 8, closed below
-  // Retest & fail of 21 EMA then recross 8 (+2): price dipped through 21, reclaimed 8
-  const retest21Bull=Pv.l<e21v&&L.c>e8v; // prev candle went below 21, current back above 8
-  const retest21Bear=Pv.h>e21v&&L.c<e8v; // prev candle went above 21, current back below 8
-
-  // Dark pool confluence — check if current price is near a significant DP level
-  const dpHitNow=nearDP(L.c);
-  const dpHitORBH=ob?nearDP(ob.high):null;
-  const dpHitORBL=ob?nearDP(ob.low):null;
-  const dpGexHit=dpHitNow&&gx.keyLevels.some(l=>Math.abs(l.price-dpHitNow.price)<P.DP_PROX);
-
-  // 1. EMA CROSSOVER + RETEST
-  if(rules.ema){
-    const r8b=retest8Bull?P.EMA_RETEST8_BOOST:0;
-    const r21b=retest21Bull?P.EMA_RETEST21_BOOST:0;
-    const r8br=retest8Bear?P.EMA_RETEST8_BOOST:0;
-    const r21br=retest21Bear?P.EMA_RETEST21_BOOST:0;
-    const rsiCb=rsiCallOk?rsiBst:0, rsiPb=rsiPutOk?rsiBst:0;
-    const crossLbl=emaBullCross?'15m bullish crossover':emaBullStack?'15m bullish stack':'';
-    const crossLblB=emaBearCross?'15m bearish crossover':emaBearStack?'15m bearish stack':'';
-    const dpLbl=dpHitNow?` · DP $${dpHitNow.price}`:'';
-
-    if(emaBull&&(retest8Bull||retest21Bull)&&abFlip&&abVwap&&volOk&&rsiCallOk&&bias!=='bearish'){
-      const conf=76+r8b+r21b+rsiCb+fib(L.c)+~~(Math.random()*6);
-      push({id:Date.now()+1,type:'CALL',rule:'EMA Crossover + Retest',
-        detail:`${crossLbl} · 5m retest ${retest8Bull?'8':'21'} EMA (${retest8Bull?e8v.toFixed(2):e21v.toFixed(2)}) · RSI ${rsiVal.toFixed(0)} · Vol confirmed${dpLbl}${fib(L.c)?' · Fib':''}`,
-        filters:[crossLbl,'5m retest','Above VWAP','Above flip','Vol rising',`RSI ${rsiVal.toFixed(0)}`,...(dpHitNow?[`DP $${dpHitNow.price}`]:[]),...(fib(L.c)?['Fib']:[])]
-          .filter(Boolean),
-        conf,gexBull,dpHit:dpHitNow,dpGexHit,
-        price:L.c,target:L.c+P.EMA_TGT,stop:e21v-P.EMA_STOP,strike:Math.round(L.c),expiry:'02/27',time:now});
-    }
-    if(emaBear&&(retest8Bear||retest21Bear)&&!abFlip&&!abVwap&&volOk&&rsiPutOk&&bias!=='bullish'){
-      const conf=74+r8br+r21br+rsiPb+fib(L.c)+~~(Math.random()*6);
-      push({id:Date.now()+2,type:'PUT',rule:'EMA Crossover + Retest',
-        detail:`${crossLblB} · 5m retest ${retest8Bear?'8':'21'} EMA (${retest8Bear?e8v.toFixed(2):e21v.toFixed(2)}) · RSI ${rsiVal.toFixed(0)} · Vol confirmed${dpLbl}${fib(L.c)?' · Fib':''}`,
-        filters:[crossLblB,'5m retest','Below VWAP','Below flip','Vol rising',`RSI ${rsiVal.toFixed(0)}`,...(dpHitNow?[`DP $${dpHitNow.price}`]:[]),...(fib(L.c)?['Fib']:[])]
-          .filter(Boolean),
-        conf,gexBear,dpHit:dpHitNow,dpGexHit,
-        price:L.c,target:L.c-P.EMA_TGT,stop:e21v+P.EMA_STOP,strike:Math.round(L.c),expiry:'02/27',time:now});
-    }
-  }
-
-  // 2. ORB — retest and breakout or retest and fail (first 90 min only)
-  if(rules.orb&&ob&&orbActive){
-    const nCW=gx.keyLevels.some(l=>l.type==='call wall'&&Math.abs(L.c-l.price)<P.ORB_WALL_DIST);
-    const nPW=gx.keyLevels.some(l=>l.type==='put wall'&&Math.abs(L.c-l.price)<P.ORB_WALL_DIST);
-    const rsiCb=rsiCallOk?rsiBst:0, rsiPb=rsiPutOk?rsiBst:0;
-
-    const orbRetestBO=Pv.l<=ob.high&&Pv.c>=ob.high*0.998&&L.c>ob.high&&abVwap;
-    const orbRetestFail=Pv.h>=ob.high&&L.c<ob.high&&!abVwap;
-    const orbRetestBD=Pv.h>=ob.low&&Pv.c<=ob.low*1.002&&L.c<ob.low&&!abVwap;
-    const orbRetestLowFail=Pv.l<=ob.low&&L.c>ob.low&&abVwap;
-
-    const dpHH=dpHitORBH?` · DP $${dpHitORBH.price}`:'';
-    const dpHL=dpHitORBL?` · DP $${dpHitORBL.price}`:'';
-
-    if(orbRetestBO&&!nCW&&abFlip&&volOk&&rsiCallOk&&!orbHighEmaOverlap)
-      push({id:Date.now()+3,type:'CALL',rule:'ORB Retest Breakout',
-        detail:`Retested ORB high ($${ob.high.toFixed(2)}) and broke out · RSI ${rsiVal.toFixed(0)}${dpHH}${fib(L.c)?' · Fib':''}`,
-        filters:['ORB retest','Breakout confirmed','Above VWAP','GEX clear',`RSI ${rsiVal.toFixed(0)}`,...(dpHitORBH?[`DP $${dpHitORBH.price}`]:[]),...(fib(L.c)?['Fib']:[])],
-        conf:81+rsiCb+fib(L.c)+~~(Math.random()*10),gexBull,dpHit:dpHitORBH,dpGexHit:dpHitORBH&&gx.keyLevels.some(l=>Math.abs(l.price-dpHitORBH.price)<P.DP_PROX),
-        price:L.c,target:L.c+P.ORB_TGT,stop:ob.high-P.ORB_STOP,strike:Math.round(L.c),expiry:'02/27',time:now});
-
-    if(orbRetestFail&&nCW&&volOk&&rsiPutOk&&!orbHighEmaOverlap)
-      push({id:Date.now()+31,type:'PUT',rule:'ORB Retest Fail (Call Wall)',
-        detail:`Retested ORB high → rejected at call wall · RSI ${rsiVal.toFixed(0)}${dpHH}${fib(L.c)?' · Fib':''}`,
-        filters:['ORB retest','Call wall reject','Below VWAP',`RSI ${rsiVal.toFixed(0)}`,...(dpHitORBH?[`DP $${dpHitORBH.price}`]:[]),...(fib(L.c)?['Fib']:[])],
-        conf:74+rsiPb+fib(L.c)+~~(Math.random()*10),gexBear,dpHit:dpHitORBH,dpGexHit:false,
-        price:L.c,target:ob.mid,stop:L.c+1.0,strike:Math.round(L.c),expiry:'02/27',time:now});
-
-    if(orbRetestBD&&!nPW&&!abFlip&&volOk&&rsiPutOk&&!orbLowEmaOverlap)
-      push({id:Date.now()+4,type:'PUT',rule:'ORB Retest Breakdown',
-        detail:`Retested ORB low ($${ob.low.toFixed(2)}) and broke down · RSI ${rsiVal.toFixed(0)}${dpHL}${fib(L.c)?' · Fib':''}`,
-        filters:['ORB retest','Breakdown confirmed','Below VWAP','Below flip',`RSI ${rsiVal.toFixed(0)}`,...(dpHitORBL?[`DP $${dpHitORBL.price}`]:[]),...(fib(L.c)?['Fib']:[])],
-        conf:79+rsiPb+fib(L.c)+~~(Math.random()*10),gexBear,dpHit:dpHitORBL,dpGexHit:dpHitORBL&&gx.keyLevels.some(l=>Math.abs(l.price-dpHitORBL.price)<P.DP_PROX),
-        price:L.c,target:L.c-P.ORB_TGT,stop:ob.low+P.ORB_STOP,strike:Math.round(L.c),expiry:'02/27',time:now});
-
-    if(orbRetestLowFail&&!nPW&&abFlip&&volOk&&rsiCallOk&&!orbLowEmaOverlap)
-      push({id:Date.now()+41,type:'CALL',rule:'ORB Low Retest Hold',
-        detail:`Retested ORB low ($${ob.low.toFixed(2)}) and held · RSI ${rsiVal.toFixed(0)}${dpHL}${fib(L.c)?' · Fib':''}`,
-        filters:['ORB low retest','Bullish hold','Above VWAP',`RSI ${rsiVal.toFixed(0)}`,...(dpHitORBL?[`DP $${dpHitORBL.price}`]:[]),...(fib(L.c)?['Fib']:[])],
-        conf:76+rsiCb+fib(L.c)+~~(Math.random()*10),gexBull,dpHit:dpHitORBL,dpGexHit:false,
-        price:L.c,target:L.c+P.ORB_TGT,stop:ob.low-P.ORB_STOP,strike:Math.round(L.c),expiry:'02/27',time:now});
-  }
-
-  // 3. SWEEP + GEX (with Flow Momentum boost)
-  if(rules.sw){
-    const sw=fl.filter(f=>f.sweep&&f.premium>=P.SWEEP_MIN_PREM);
-    const bb=sw.filter(f=>f.type==='CALL').length>=P.SWEEP_MIN_COUNT;
-    const bp=sw.filter(f=>f.type==='PUT').length>=P.SWEEP_MIN_COUNT;
-    const nl=gx.keyLevels.some(l=>Math.abs(L.c-l.price)<P.GEX_DIST&&(l.type==='resistance'||l.type==='support'));
-    const rsiCb=rsiCallOk?rsiBst:0, rsiPb=rsiPutOk?rsiBst:0;
-    const mom=flowMomentum15m(fl);
-    const momBullBoost=mom.bull?P.FLOW_MOM_BOOST:0;
-    const momBearBoost=mom.bear?P.FLOW_MOM_BOOST:0;
-    const momBullLbl=mom.bull?` · Flow momentum ${Math.round(mom.ratio*100)}% calls`:'';
-    const momBearLbl=mom.bear?` · Flow momentum ${Math.round((1-mom.ratio)*100)}% puts`:'';
-    if(bb&&nl&&abFlip&&abVwap&&volOk)
-      push({id:Date.now()+5,type:'CALL',rule:'Sweep + GEX Confluence',
-        detail:`${P.SWEEP_MIN_COUNT}+ call sweeps >$${P.SWEEP_MIN_PREM/1000}K at GEX level · RSI ${rsiVal.toFixed(0)}${momBullLbl}${fib(L.c)?' · Fib':''}`,
-        filters:[`$${P.SWEEP_MIN_PREM/1000}K+ sweeps`,'GEX level','Above VWAP','Vol rising',`RSI ${rsiVal.toFixed(0)}`,...(mom.bull?['Flow momentum']:[]),...(fib(L.c)?['Fib']:[])],
-        conf:83+rsiCb+momBullBoost+fib(L.c)+~~(Math.random()*10),gexBull,price:L.c,target:L.c+3,stop:L.c-1.5,strike:Math.round(L.c),expiry:'02/27',time:now});
-    if(bp&&nl&&!abFlip&&!abVwap&&volOk)
-      push({id:Date.now()+6,type:'PUT',rule:'Sweep + GEX Confluence',
-        detail:`${P.SWEEP_MIN_COUNT}+ put sweeps >$${P.SWEEP_MIN_PREM/1000}K at GEX level · RSI ${rsiVal.toFixed(0)}${momBearLbl}${fib(L.c)?' · Fib':''}`,
-        filters:[`$${P.SWEEP_MIN_PREM/1000}K+ sweeps`,'GEX level','Below VWAP','Vol rising',`RSI ${rsiVal.toFixed(0)}`,...(mom.bear?['Flow momentum']:[]),...(fib(L.c)?['Fib']:[])],
-        conf:81+rsiPb+momBearBoost+fib(L.c)+~~(Math.random()*10),gexBear,price:L.c,target:L.c-3,stop:L.c+1.5,strike:Math.round(L.c),expiry:'02/27',time:now});
-  }
-
-  // 4. HVN — retest and fail or retest and breakout
-  // +5% APEX boost if direction aligns with EMA crossover (handled in detectApex)
-  if(rules.hvn){
-    const nh=hvns.find(h=>Math.abs(L.c-h)<P.HVN_PROX);
-    const rsiCb=rsiCallOk?rsiBst:0, rsiPb=rsiPutOk?rsiBst:0;
-    if(nh){
-      // Retest and fail bearish: price touched HVN, wick up to it, closed below
-      const hvnFail=Math.abs(L.h-nh)<P.HVN_WICK&&L.c<L.o&&L.c<nh;
-      // Retest and breakout bullish: price touched HVN from below, closed above
-      const hvnBreak=Math.abs(L.l-nh)<P.HVN_WICK&&L.c>nh&&L.c>L.o;
-      const hvnEmaAlignCall=emaBull; // for APEX boost flag
-      const hvnEmaAlignPut=emaBear;
-
-      if(hvnFail&&!abVwap&&bias!=='bullish'&&volOk&&rsiPutOk)
-        push({id:Date.now()+7,type:'PUT',rule:'HVN Retest Fail',
-          detail:`Rejected at HVN ($${nh.toFixed(2)}) · Bearish close · RSI ${rsiVal.toFixed(0)}${hvnEmaAlignPut?' · EMA aligned':''}${fib(L.c)?' · Fib':''}`,
-          filters:['HVN retest','Bearish rejection','Below VWAP','Vol rising',`RSI ${rsiVal.toFixed(0)}`,...(hvnEmaAlignPut?['EMA aligned']:[]),...(fib(L.c)?['Fib']:[])],
-          conf:73+rsiPb+fib(L.c)+~~(Math.random()*10),gexBear,hvnEmaAlign:hvnEmaAlignPut,
-          price:L.c,target:L.c-2,stop:nh+.5,strike:Math.round(L.c),expiry:'02/27',time:now});
-
-      if(hvnBreak&&abVwap&&bias!=='bearish'&&volOk&&rsiCallOk)
-        push({id:Date.now()+8,type:'CALL',rule:'HVN Breakout',
-          detail:`Broke through HVN ($${nh.toFixed(2)}) · Bullish reclaim · RSI ${rsiVal.toFixed(0)}${hvnEmaAlignCall?' · EMA aligned':''}${fib(L.c)?' · Fib':''}`,
-          filters:['HVN breakout','Bullish close','Above VWAP','Vol rising',`RSI ${rsiVal.toFixed(0)}`,...(hvnEmaAlignCall?['EMA aligned']:[]),...(fib(L.c)?['Fib']:[])],
-          conf:75+rsiCb+fib(L.c)+~~(Math.random()*10),gexBull,hvnEmaAlign:hvnEmaAlignCall,
-          price:L.c,target:L.c+2,stop:nh-.5,strike:Math.round(L.c),expiry:'02/27',time:now});
-    }
-  }
-
-  // 5. STRIKE MAGNET — institutional clustering at a single strike within 15 min
-  if(rules.dd){ // reuses dd toggle slot
-    const sm=detectStrikeMagnet(fl,L.c,now);
-    if(sm){
-      const isBull=sm.type==='CALL';
-      const rsiOk=isBull?rsiCallOk:rsiPutOk;
-      const rsiB=rsiOk?rsiBst:0;
-      if(rsiOk&&volOk&&(isBull?abFlip&&abVwap:!abFlip&&!abVwap))
-        push({id:Date.now()+9,type:sm.type,rule:'Strike Magnet',
-          detail:`${sm.count} prints >$${P.SWEEP_MIN_PREM/1000}K clustering at $${sm.strike} · $${(sm.totalPrem/1e6).toFixed(1)}M total · RSI ${rsiVal.toFixed(0)}${fib(sm.strike)?' · Fib':''}`,
-          filters:['Strike cluster',`${sm.count} prints`,'Flow concentration',`RSI ${rsiVal.toFixed(0)}`,...(fib(sm.strike)?['Fib']:[])],
-          conf:78+rsiB+fib(sm.strike)+~~(Math.random()*10),
-          gexBull:isBull,gexBear:!isBull,
-          price:L.c,target:isBull?L.c+2.5:L.c-2.5,stop:isBull?L.c-1:L.c+1,
-          strike:sm.strike,expiry:'02/27',time:now});
-    }
-  }
-  return sig;
-}
-
-// ── APEX — weighted scoring
-function detectApex(sg){
-  // Determine if we're past the ORB window
-  const etNow=new Date(new Date().toLocaleString('en-US',{timeZone:'America/New_York'}));
-  const etMins=etNow.getHours()*60+etNow.getMinutes();
-  const orbExpired=etMins>=(570+P.ORB_WINDOW_MINS);
-  const weights=orbExpired?P.APEX_WEIGHTS_LATE:P.APEX_WEIGHTS;
-
-  let best=null;
-  for(const[dir,grp]of[['CALL',sg.filter(s=>s.type==='CALL')],['PUT',sg.filter(s=>s.type==='PUT')]]){
-    if(grp.length<P.APEX_MIN_SIGS) continue;
-
-    // Weighted base score — sum weights of firing signals, normalize to 100
-    const totalFiringWeight=grp.reduce((a,s)=>a+(weights[s.rule]||10),0);
-    const maxPossibleWeight=Object.values(weights).reduce((a,v)=>a+v,0);
-    let comp=Math.round((totalFiringWeight/maxPossibleWeight)*100);
-
-    // Quality multiplier — blend in average individual confidence
-    const avgConf=grp.reduce((a,s)=>a+s.conf,0)/grp.length;
-    comp=Math.round(comp*0.6+avgConf*0.4); // 60% weight coverage, 40% signal quality
-
-    // GEX regime boost
-    const gexAligned=dir==='CALL'?grp.every(s=>s.gexBull):grp.every(s=>s.gexBear);
-    if(gexAligned) comp+=P.GEX_REGIME_BOOST;
-
-    // HVN EMA alignment boost
-    const hvnSig=grp.find(s=>(s.rule==='HVN Retest Fail'||s.rule==='HVN Breakout')&&s.hvnEmaAlign);
-    if(hvnSig) comp+=P.HVN_EMA_ALIGN_BOOST;
-
-    // Dark pool boosts
-    const dpEmaSig=grp.find(s=>s.rule==='EMA Crossover + Retest'&&s.dpHit);
-    const dpOrbSig=grp.find(s=>(s.rule==='ORB Retest Breakout'||s.rule==='ORB Retest Breakdown'||s.rule==='ORB Low Retest Hold'||s.rule==='ORB Retest Fail (Call Wall)')&&s.dpHit);
-    const dpGexSig=grp.find(s=>s.dpGexHit);
-    if(dpEmaSig) comp+=P.DP_EMA_BOOST;
-    if(dpOrbSig) comp+=P.DP_ORB_BOOST;
-    if(dpGexSig) comp+=P.DP_GEX_BOOST;
-
-    comp=Math.min(comp,99);
-    if(comp<P.APEX_CONF) continue;
-
-    const ps=grp.map(s=>s.price).sort((a,b)=>a-b), entry=ps[~~(ps.length/2)];
-    const stop=dir==='CALL'?Math.max(...grp.map(s=>s.stop)):Math.min(...grp.map(s=>s.stop));
-    const target=dir==='CALL'?entry+P.APEX_TGT_MOVE:entry-P.APEX_TGT_MOVE;
-
-    // Score breakdown for display
-    const breakdown=grp.map(s=>`${s.rule.replace('EMA Crossover + Retest','EMA').replace('Sweep + GEX Confluence','Sweep+GEX').replace('ORB Retest Breakout','ORB-BO').replace('ORB Retest Breakdown','ORB-BD').replace('ORB Low Retest Hold','ORB-Hold').replace('ORB Retest Fail (Call Wall)','ORB-Fail').replace('HVN Retest Fail','HVN-Fail').replace('HVN Breakout','HVN-BO').replace('Strike Magnet','Magnet')} ${weights[s.rule]||10}pts`).join(' · ');
-    const boosts=[];
-    if(gexAligned) boosts.push(`GEX+${P.GEX_REGIME_BOOST}`);
-    if(hvnSig) boosts.push(`HVN/EMA+${P.HVN_EMA_ALIGN_BOOST}`);
-    if(dpEmaSig) boosts.push(`DP/EMA+${P.DP_EMA_BOOST}`);
-    if(dpOrbSig) boosts.push(`DP/ORB+${P.DP_ORB_BOOST}`);
-    if(dpGexSig) boosts.push(`DP/GEX+${P.DP_GEX_BOOST}`);
-    const modeNote=orbExpired?'Late session weights':'ORB window weights';
-
-    if(!best||comp>best.conf) best={
-      id:Date.now()+99,type:dir,rule:'★ APEX CONFLUENCE',isApex:true,
-      detail:`${grp.length} signals · ${breakdown}${boosts.length?' · Boosts: '+boosts.join(' '):''}`,
-      scoreBreakdown:`${modeNote} · Weighted ${Math.round((totalFiringWeight/maxPossibleWeight)*100)}% coverage · Avg conf ${Math.round(avgConf)}%${boosts.length?' · '+boosts.join(' '):''}`,
-      filters:grp.map(s=>s.rule),componentSigs:grp,conf:comp,price:entry,target,stop,
-      strike:Math.round(entry),expiry:'02/27',
-      time:new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'})
-    };
-  }
-  return best;
+// Live thermometer scores — continuous, not just when fired
+function apexThermometer(mom,lvl,flow){
+  const score=(dir)=>{
+    const m=mom.direction===dir?mom.score:(mom.direction===null?mom.score*0.3:0);
+    const l=lvl.direction===dir?lvl.score:(lvl.direction===null?lvl.score*0.3:0);
+    const f=flow.direction===dir?flow.score:(flow.direction===null?flow.score*0.3:0);
+    return Math.min(Math.round((m*P.APEX_W_MOM+l*P.APEX_W_LVL+f*P.APEX_W_FLOW)/100),99);
+  };
+  return{call:score('CALL'),put:score('PUT')};
 }
 
 // ══════════════════════════════════════════
@@ -944,6 +753,7 @@ function applyFlowGEX(){
     return;
   }
   P.GEX_FLIP=result.flip; P.GEX_CWALL=result.cwall; P.GEX_PWALL=result.pwall;
+  trackGEXVelocity(result.cwall,result.pwall,result.flip);
   gexLastRefresh=new Date(); gexDataValid=true;
   const res2dist=Math.round((result.cwall-result.flip)*0.4)||3;
   const sup2dist=Math.round((result.flip-result.pwall)*0.4)||3;
@@ -1098,7 +908,7 @@ async function connectAll(){
   await fetchPolygon().catch(()=>{});
   await Promise.all([fetchUW(),fetchDarkPool()]).catch(()=>{});
   if(K.trad){try{await tradierChain(tradingDate());CON.trad=true;}catch(e){}}
-  if(K.ptoken&&K.puser){const ok=await sendSMS('SPY Edge v1.6 connected ✓ — APEX alerts active.');if(ok)CON.push=true;}
+  if(K.ptoken&&K.puser){const ok=await sendSMS('SPY Edge v1.7 connected ✓ — APEX alerts active.');if(ok)CON.push=true;}
   launchApp();
 }
 const g=id=>document.getElementById(id)?.value.trim()||'';
@@ -1182,91 +992,166 @@ function updateDots(){
 function setBadge(id,txt,bg,col,border){const el=document.getElementById(id);if(!el)return;el.textContent=txt;el.style.background=bg;el.style.color=col;el.style.borderColor=border;}
 
 // ── SCAN
+let currentMom={active:false,direction:null,score:0,detail:'',subItems:[],entry:price,target:price,stop:price};
+let currentLvl={active:false,direction:null,score:0,detail:'',subItems:[],entry:price,target:price,stop:price,levelName:'—'};
+let currentFlow={active:false,direction:null,score:0,detail:'',subItems:[],entry:price,target:price,stop:price,ratio:0.5};
+let apexFired=null; // persists until dismissed
+
 function scanSignals(){
   const fl=getFlow(),gx=getGEX();
-  const newSigs=detectSigs(c5,c15,fl,gx);
-  const apex=detectApex(newSigs);
-  const active=Object.values(rules).filter(Boolean).length;
+  currentMom=scoreMomentum(c5,c15);
+  currentLvl=scoreLevelReaction(c5,gx);
+  currentFlow=scoreFlowConviction(fl);
+  const apex=detectApex(currentMom,currentLvl,currentFlow,gx);
   if(apex){
-    document.getElementById('sb-apex').innerHTML=`<span style="color:#f59e0b;font-weight:700">★ APEX ACTIVE — ${apex.type} ${apex.conf}%</span>`;
+    lastApexKey=`${apex.type}-${Math.round(apex.price/2)*2}`;
+    lastApexFiredAt=Date.now();
     logApexFire(apex);
     if(P.SMS_APEX) sendSMS(apexSMS(apex));
-  }else{
-    document.getElementById('sb-apex').textContent=`APEX: ${newSigs.length}/${active} rules aligned`;
+    apexFired=apex;
   }
-  const noApex=sigs.filter(s=>!s.isApex);
-  const ex=new Set(noApex.map(s=>s.rule+s.type));
-  const fresh=newSigs.filter(s=>!ex.has(s.rule+s.type));
-  sigs=apex?[apex,...[...fresh,...noApex].slice(0,20)]:[...fresh,...noApex].slice(0,20);
-  logBlockers(newSigs,active);
-  renderSigs();
+  const therm=apexThermometer(currentMom,currentLvl,currentFlow);
+  const best=therm.call>therm.put?{dir:'CALL',score:therm.call}:{dir:'PUT',score:therm.put};
+  const sbEl=document.getElementById('sb-apex');
+  if(sbEl){
+    if(apexFired) sbEl.innerHTML=`<span style="color:#f59e0b;font-weight:700">★ APEX FIRED — ${apexFired.type} ${apexFired.conf}%</span>`;
+    else sbEl.textContent=`APEX ${best.dir} ${best.score}% · threshold ${P.APEX_CONF}%`;
+  }
+  logBlockers(currentMom,currentLvl,currentFlow);
+  // Keep sigs array for order staging compat
+  sigs=apexFired?[{...apexFired,isApex:true}]:[];
+  renderSignalCards(currentMom,currentLvl,currentFlow,therm);
   if(tab==='summary') renderSummary();
   refreshBadge();
 }
 
-function renderSigs(){
-  const el=document.getElementById('signals-list');
+function renderSignalCards(mom,lvl,flow,therm){
+  const el=document.getElementById('signals-list'); if(!el) return;
   const cnt=document.getElementById('cnt-signals');
-  const hasApex=sigs.some(s=>s.isApex);
-  cnt.textContent=sigs.length; cnt.style.display=sigs.length?'inline':'none'; cnt.style.background=hasApex?'#f59e0b':'#10b981';
-  if(!sigs.length){el.innerHTML=`<div style="text-align:center;padding:60px;color:#334155"><div style="font-size:36px;margin-bottom:12px">⚡</div><div>No signals — click SCAN NOW or enable LIVE</div></div>`;return;}
-  el.innerHTML=sigs.map(s=>{
-    const iC=s.type==='CALL',col=iC?'#10b981':'#ef4444';
-    if(s.isApex){
-      const rows=(s.componentSigs||[]).map(cs=>{
-        const w=etMins>=(570+P.ORB_WINDOW_MINS)?P.APEX_WEIGHTS_LATE:P.APEX_WEIGHTS;
-        const wt=w[cs.rule]||10;
-        return `<div style="display:flex;justify-content:space-between;font-size:10px;padding:5px 0;border-bottom:1px solid #0f172a"><span style="color:#94a3b8;min-width:150px">${cs.rule}</span><span style="color:#a78bfa;min-width:30px;text-align:right">${wt}pts</span><span style="color:${cs.conf>=80?'#10b981':'#f59e0b'};min-width:34px;text-align:right">${cs.conf}%</span><span style="color:#475569;flex:1;text-align:right">tgt <span style="color:#10b981">$${cs.target.toFixed(2)}</span> · stop <span style="color:#ef4444">$${cs.stop.toFixed(2)}</span></span></div>`;
-      }).join('');
-      const etMins2=new Date(new Date().toLocaleString('en-US',{timeZone:'America/New_York'})).getHours()*60+new Date(new Date().toLocaleString('en-US',{timeZone:'America/New_York'})).getMinutes();
-      const orbWindowNote=etMins2>=(570+P.ORB_WINDOW_MINS)?'Late weights':'ORB window';
-      return `<div style="background:linear-gradient(135deg,${iC?'#040d08':'#0d0404'},#080814);border:2px solid ${col};border-radius:10px;padding:22px;margin-bottom:20px;box-shadow:0 0 40px ${col}22;position:relative;overflow:hidden;cursor:pointer" onclick="stageOrder(${s.id})">
-        <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,transparent,${col},transparent);animation:pulse 2s infinite"></div>
-        <div style="position:absolute;top:12px;right:16px;font-size:10px;color:#475569">${s.time} · 🔔 Push sent</div>
-        <div style="display:flex;align-items:flex-start;gap:16px;margin-bottom:14px">
-          <div style="font-size:36px;color:${col};line-height:1;margin-top:4px">${iC?'▲':'▼'}</div>
-          <div style="flex:1">
-            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:5px">
-              <span style="font-size:15px;font-weight:700;color:${col};letter-spacing:1px">★ APEX CONFLUENCE</span>
-              <span class="badge badge-${s.type.toLowerCase()}">${s.type}</span>
-              <span style="font-size:9px;padding:3px 9px;border-radius:3px;background:${col}22;border:1px solid ${col}55;color:${col};letter-spacing:2px;font-weight:700">WEIGHTED · ${orbWindowNote}</span>
-            </div>
-            <div style="font-size:11px;color:#64748b;line-height:1.6;margin-bottom:4px">${s.detail}</div>
-            ${s.scoreBreakdown?`<div style="font-size:10px;color:#334155;line-height:1.5">${s.scoreBreakdown}</div>`:''}
+  const anyActive=[mom,lvl,flow].some(s=>s.active);
+  if(cnt){cnt.textContent=apexFired?'★':'';cnt.style.display=apexFired?'inline':'none';cnt.style.background='#f59e0b';}
+
+  // Color for each signal card
+  const cardColor=(sig)=>{
+    if(!sig.active) return '#334155'; // grey
+    return sig.direction==='CALL'?'#10b981':'#ef4444';
+  };
+  const cardBg=(sig)=>{
+    if(!sig.active) return '#0c0c1a';
+    return sig.direction==='CALL'?'#040e09':'#0d0404';
+  };
+  const dirIcon=(sig)=>{
+    if(!sig.active) return '<span style="font-size:22px;color:#334155">—</span>';
+    return sig.direction==='CALL'?'<span style="font-size:22px;color:#10b981">▲</span>':'<span style="font-size:22px;color:#ef4444">▼</span>';
+  };
+  const scoreBar=(score,col)=>`<div style="height:5px;background:#1e293b;border-radius:3px;overflow:hidden;margin-top:6px"><div style="height:100%;width:${score}%;background:${col};border-radius:3px;transition:width .8s"></div></div>`;
+  const statusBadge=(sig)=>{
+    if(!sig.active) return `<span style="font-size:9px;padding:2px 8px;border-radius:3px;background:#1e293b;color:#475569;letter-spacing:1px">INACTIVE</span>`;
+    const col=sig.direction==='CALL'?'#10b981':'#ef4444';
+    return `<span style="font-size:9px;padding:2px 8px;border-radius:3px;background:${col}22;color:${col};border:1px solid ${col}44;letter-spacing:1px;font-weight:700">${sig.direction}</span>`;
+  };
+
+  const sigCard=(name,sig,desc)=>{
+    const col=cardColor(sig), bg=cardBg(sig);
+    return `<div style="background:${bg};border:1px solid ${col}55;border-left:3px solid ${col};border-radius:8px;padding:14px 16px;margin-bottom:10px">
+      <div style="display:flex;align-items:flex-start;gap:12px">
+        <div style="min-width:28px;text-align:center;padding-top:2px">${dirIcon(sig)}</div>
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap">
+            <span style="font-size:12px;font-weight:700;color:#94a3b8;letter-spacing:1px">${name.toUpperCase()}</span>
+            ${statusBadge(sig)}
+            <span style="font-size:10px;color:#475569">${desc}</span>
           </div>
-          <div style="text-align:center;min-width:78px;padding:10px;background:#080814;border-radius:8px;border:1px solid ${col}33">
-            <div style="font-size:9px;color:#475569;letter-spacing:1px;margin-bottom:3px">COMPOSITE</div>
-            <div style="font-size:30px;font-weight:700;color:${col};line-height:1">${s.conf}</div>
-            <div style="font-size:9px;color:#334155;margin-top:2px">% conf</div>
+          <div style="font-size:11px;color:${sig.active?'#cbd5e1':'#475569'};line-height:1.5;margin-bottom:4px">${sig.detail||'—'}</div>
+          <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:2px">
+            ${(sig.subItems||[]).slice(0,4).map(i=>`<span style="font-size:9px;padding:1px 6px;border-radius:3px;background:#0f172a;border:1px solid #1e293b;color:#475569">${i}</span>`).join('')}
           </div>
+          ${scoreBar(sig.score,col)}
         </div>
-        <div class="g4" style="margin-bottom:12px">
-          ${[['ENTRY',`$${s.price.toFixed(2)}`,'#e2e8f0'],[`TARGET +${P.APEX_TGT_PCT}%`,`$${s.target.toFixed(2)}`,'#10b981'],[`STOP -${P.APEX_STOP_PCT}%`,`$${s.stop.toFixed(2)}`,'#ef4444'],['STRIKE',`$${s.strike} ${s.expiry}`,'#f59e0b']].map(([l,v,c])=>`<div style="background:#080814;border-radius:6px;padding:9px;border:1px solid #1e293b"><div style="font-size:9px;color:#475569;letter-spacing:1px;margin-bottom:4px">${l}</div><div style="font-size:13px;font-weight:700;color:${c}">${v}</div></div>`).join('')}
+        <div style="text-align:right;min-width:46px">
+          <div style="font-size:20px;font-weight:700;color:${col};line-height:1">${sig.score}</div>
+          <div style="font-size:9px;color:#334155">/ 100</div>
         </div>
-        <div style="background:#080814;border-radius:6px;padding:10px;margin-bottom:12px;border:1px solid #0f172a">
-          <div style="font-size:9px;color:#475569;letter-spacing:2px;margin-bottom:6px">CONTRIBUTING SIGNALS · WEIGHT · CONFIDENCE</div>${rows}
-        </div>
-        <button class="btn-primary" onclick="event.stopPropagation();stageOrder(${s.id})" style="width:100%;padding:10px;border-radius:6px;font-size:12px;letter-spacing:1px;background:${col}">★ STAGE APEX ORDER →</button>
-      </div>`;
-    }
-    const cc=s.conf>=80?'#10b981':s.conf>=70?'#f59e0b':'#94a3b8';
-    return `<div class="card sig-card" style="padding:14px;display:flex;gap:14px;align-items:center;margin-bottom:10px;border-left:3px solid ${col}" onclick="stageOrder(${s.id})">
-      <div style="min-width:46px;text-align:center"><div style="font-size:16px;font-weight:700;color:${col}">${iC?'▲':'▼'}</div><div style="font-size:10px;color:${col};font-weight:700">${s.type}</div></div>
-      <div style="flex:1">
-        <div style="display:flex;gap:8px;align-items:center;margin-bottom:3px"><span style="font-size:12px;font-weight:600;color:#f1f5f9">${s.rule}</span><span class="badge badge-${s.type.toLowerCase()}">${s.type}</span><span style="font-size:10px;color:#475569">${s.time}</span></div>
-        <div style="font-size:11px;color:#64748b;margin-bottom:4px">${s.detail}</div>
-        <div style="margin-bottom:5px">${(s.filters||[]).map(f=>`<span class="ftag">${f}</span>`).join('')}</div>
-        <div style="display:flex;gap:14px;font-size:11px"><span style="color:#475569">Entry <b style="color:#e2e8f0">$${s.price.toFixed(2)}</b></span><span style="color:#475569">Tgt <b style="color:#10b981">$${s.target.toFixed(2)}</b></span><span style="color:#475569">Stop <b style="color:#ef4444">$${s.stop.toFixed(2)}</b></span><span style="color:#475569">Strike <b style="color:#f59e0b">$${s.strike} ${s.expiry}</b></span></div>
       </div>
-      <div style="text-align:right;min-width:86px">
-        <div style="font-size:10px;color:#475569;margin-bottom:3px">CONFIDENCE</div>
-        <div style="font-size:20px;font-weight:700;color:${cc}">${s.conf}%</div>
-        <div style="height:4px;background:#1e293b;border-radius:2px;margin-top:5px;overflow:hidden"><div style="height:100%;width:${s.conf}%;background:linear-gradient(90deg,#10b981,#06b6d4);border-radius:2px;transition:width 1s"></div></div>
-      </div>
-      <button class="btn-primary" onclick="event.stopPropagation();stageOrder(${s.id})" style="padding:7px 12px;border-radius:6px;font-size:11px;white-space:nowrap">STAGE →</button>
+      ${sig.active?`<div style="display:flex;gap:10px;margin-top:10px;padding-top:10px;border-top:1px solid #1e293b;font-size:10px">
+        <span style="color:#475569">Entry <b style="color:#e2e8f0">$${sig.entry.toFixed(2)}</b></span>
+        <span style="color:#475569">Target <b style="color:#10b981">$${sig.target.toFixed(2)}</b></span>
+        <span style="color:#475569">Stop <b style="color:#ef4444">$${sig.stop.toFixed(2)}</b></span>
+      </div>`:''}
     </div>`;
-  }).join('');
+  };
+
+  // Thermometer
+  const thermDir=therm.call>=therm.put?'CALL':'PUT';
+  const thermScore=Math.max(therm.call,therm.put);
+  const thermCol=thermDir==='CALL'?'#10b981':'#ef4444';
+  const thermPct=thermScore;
+  const threshold=P.APEX_CONF;
+  const thresholdPct=threshold;
+
+  const thermHTML=`<div style="background:#0c0c1a;border:1px solid #1e293b;border-radius:8px;padding:16px;display:flex;flex-direction:column;height:100%;min-height:320px">
+    <div style="font-size:9px;color:#475569;letter-spacing:2px;margin-bottom:10px">APEX STRENGTH</div>
+    <!-- Thermometer gauge -->
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px">
+      <div style="position:relative;width:36px;flex:1;background:#0f172a;border-radius:18px;border:1px solid #1e293b;overflow:hidden;min-height:160px">
+        <!-- Threshold line -->
+        <div style="position:absolute;left:0;right:0;bottom:${thresholdPct}%;height:2px;background:#f59e0b;z-index:2"></div>
+        <!-- Fill -->
+        <div style="position:absolute;bottom:0;left:0;right:0;height:${thermPct}%;background:linear-gradient(180deg,${thermCol},${thermCol}88);border-radius:18px;transition:height 1s ease;min-height:4px"></div>
+        <!-- Scale marks -->
+        ${[25,50,75].map(v=>`<div style="position:absolute;left:0;right:0;bottom:${v}%;height:1px;background:#1e293b44"></div>`).join('')}
+      </div>
+      <div style="text-align:center">
+        <div style="font-size:28px;font-weight:700;color:${thermCol};line-height:1">${thermScore}</div>
+        <div style="font-size:8px;color:#475569;margin:2px 0">THRESHOLD</div>
+        <div style="font-size:11px;color:#f59e0b;font-weight:700">${threshold}%</div>
+      </div>
+    </div>
+    <!-- Call vs Put bars -->
+    <div style="margin-top:12px;padding-top:10px;border-top:1px solid #1e293b">
+      <div style="display:flex;justify-content:space-between;font-size:9px;color:#475569;margin-bottom:4px"><span>CALL</span><span>${therm.call}%</span></div>
+      <div style="height:4px;background:#1e293b;border-radius:2px;overflow:hidden;margin-bottom:6px"><div style="height:100%;width:${therm.call}%;background:#10b981;border-radius:2px;transition:width .8s"></div></div>
+      <div style="display:flex;justify-content:space-between;font-size:9px;color:#475569;margin-bottom:4px"><span>PUT</span><span>${therm.put}%</span></div>
+      <div style="height:4px;background:#1e293b;border-radius:2px;overflow:hidden"><div style="height:100%;width:${therm.put}%;background:#ef4444;border-radius:2px;transition:width .8s"></div></div>
+    </div>
+  </div>`;
+
+  // APEX fired flag
+  const apexFlagHTML=apexFired?`<div style="background:linear-gradient(135deg,${apexFired.type==='CALL'?'#040e09':'#0d0404'},#08081a);border:2px solid ${apexFired.type==='CALL'?'#10b981':'#ef4444'};border-radius:8px;padding:14px;margin-bottom:10px;position:relative;overflow:hidden">
+    <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,${apexFired.type==='CALL'?'#10b981':'#ef4444'},transparent);animation:pulse 2s infinite"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px">
+          <span style="font-size:14px;font-weight:700;color:${apexFired.type==='CALL'?'#10b981':'#ef4444'}">★ APEX FIRED</span>
+          <span style="font-size:9px;padding:2px 7px;border-radius:3px;background:${apexFired.type==='CALL'?'#10b98122':'#ef444422'};color:${apexFired.type==='CALL'?'#10b981':'#ef4444'};border:1px solid ${apexFired.type==='CALL'?'#10b98144':'#ef444444'};font-weight:700">${apexFired.type}</span>
+          <span style="font-size:12px;font-weight:700;color:${apexFired.type==='CALL'?'#10b981':'#ef4444'}">${apexFired.conf}%</span>
+        </div>
+        <div style="font-size:10px;color:#475569">${apexFired.time} · Entry $${apexFired.price.toFixed(2)} · Strike $${apexFired.strike}</div>
+      </div>
+      <button class="btn-ghost" onclick="apexFired=null;renderSignalCards(currentMom,currentLvl,currentFlow,apexThermometer(currentMom,currentLvl,currentFlow))" style="font-size:10px;padding:4px 10px;border-radius:4px">✕ DISMISS</button>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:8px">
+      ${[['MOM',apexFired.momScore,'#10b981'],['LEVEL',apexFired.lvlScore,'#06b6d4'],['FLOW',apexFired.flowScore,'#a78bfa']].map(([l,v,c])=>`<div style="background:#080814;border-radius:5px;padding:7px;text-align:center"><div style="font-size:8px;color:#475569;letter-spacing:1px">${l}</div><div style="font-size:15px;font-weight:700;color:${c}">${v}%</div></div>`).join('')}
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px">
+      ${[['TARGET',`$${apexFired.target.toFixed(2)}`,'#10b981'],['STOP',`$${apexFired.stop.toFixed(2)}`,'#ef4444']].map(([l,v,c])=>`<div style="background:#080814;border-radius:5px;padding:7px"><div style="font-size:8px;color:#475569;letter-spacing:1px;margin-bottom:2px">${l}</div><div style="font-size:13px;font-weight:700;color:${c}">${v}</div></div>`).join('')}
+    </div>
+    <button class="btn-primary" onclick="stageOrder(${apexFired.id})" style="width:100%;padding:8px;border-radius:6px;font-size:11px;letter-spacing:1px;background:${apexFired.type==='CALL'?'#10b981':'#ef4444'}">STAGE ORDER →</button>
+  </div>`:'';
+
+  el.innerHTML=`<div style="display:grid;grid-template-columns:1fr 120px;gap:12px;align-items:start">
+    <div>
+      ${apexFlagHTML}
+      ${sigCard('Momentum',mom,'15m EMA trend + 5m retest')}
+      ${sigCard('Level Reaction',lvl,'GEX physics · HVN · Dark Pool')}
+      ${sigCard('Flow Conviction',flow,'Sweeps · Strike cluster · 15m ratio')}
+    </div>
+    <div style="position:sticky;top:0">${thermHTML}</div>
+  </div>`;
 }
+
+// Legacy stub so any remaining references don't break
+function renderSigs(){ renderSignalCards(currentMom,currentLvl,currentFlow,apexThermometer(currentMom,currentLvl,currentFlow)); }
 
 // ── FLOW
 function renderFlow(){
@@ -1347,8 +1232,7 @@ function toggleApexBT(){
 }
 function initBTChecks(){
   document.getElementById('bt-checks').innerHTML=[
-    {k:'ema',l:'EMA Crossover + Retest'},{k:'orb',l:'ORB Retest Break/Fail'},
-    {k:'sw',l:'Sweep + GEX'},{k:'hvn',l:'HVN Retest Break/Fail'},{k:'dd',l:'Strike Magnet'},
+    {k:'ema',l:'Momentum (EMA)'},{k:'sw',l:'Level Reaction (GEX·HVN·DP)'},{k:'dd',l:'Flow Conviction (Sweeps·Cluster)'},
   ].map(r=>`<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:12px"><input type="checkbox" id="btc-${r.k}" ${rules[r.k]?'checked':''} onchange="rules['${r.k}']=this.checked" style="accent-color:#10b981"/><label for="btc-${r.k}" style="color:${rules[r.k]?'#e2e8f0':'#475569'};cursor:pointer">${r.l}</label></div>`).join('');
 }
 async function runBacktest(){
@@ -1456,22 +1340,17 @@ function logApexFire(apex){
   l[d].fires.push({id:apex.id,firedAt:Date.now(),time:apex.time,type:apex.type,conf:apex.conf,price:apex.price,target:apex.target,stop:apex.stop,strike:apex.strike,expiry:apex.expiry,components:(apex.componentSigs||[]).map(s=>s.rule),outcome:null,notes:'',tPct:P.APEX_TGT_PCT,sPct:P.APEX_STOP_PCT});
   saveLog(l); refreshBadge();
 }
-function logBlockers(sg,active){
-  if(!sg.length) return;
-  const allRules=['EMA Crossover + Retest','ORB Retest Breakout','ORB Retest Breakdown','ORB Low Retest Hold','ORB Retest Fail (Call Wall)','Sweep + GEX Confluence','HVN Retest Fail','HVN Breakout','Strike Magnet'];
+function logBlockers(mom,lvl,flow){
+  // In v1.7 we log near-miss when thermometer is high but APEX didn't fire
+  const therm=apexThermometer(mom,lvl,flow);
+  const best=Math.max(therm.call,therm.put);
+  if(best<55) return; // nothing interesting happening
   const l=loadLog(),d=todayKey(); ensureDay(l,d);
-  for(const[dir,grp]of[['CALL',sg.filter(s=>s.type==='CALL')],['PUT',sg.filter(s=>s.type==='PUT')]]){
-    if(!grp.length) continue;
-    if(grp.length>=P.APEX_MIN_SIGS) continue;
-    if(l[d].blockerLog.slice(-10).some(b=>b.direction===dir&&Date.now()-b.recordedAt<10*60*1000)) continue;
-    const pr=grp.map(s=>s.rule),ab=allRules.filter(r=>!pr.includes(r));
-    l[d].blockerLog.push({recordedAt:Date.now(),time:new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}),direction:dir,signalCount:grp.length,needed:P.APEX_MIN_SIGS,presentRules:pr,absentRules:ab});
-    if(P.SMS_BLOCKER_3X){
-      const counts={};l[d].blockerLog.forEach(b=>(b.absentRules||[]).forEach(r=>{counts[r]=(counts[r]||0)+1;}));
-      const top=Object.entries(counts).sort((a,z)=>z[1]-a[1])[0];
-      if(top&&top[1]===3) sendSMS(`SPY Edge: "${top[0]}" has blocked APEX 3× today (${dir} side). Consider reviewing its threshold in PARAMS.`);
-    }
-  }
+  const dir=therm.call>=therm.put?'CALL':'PUT';
+  if(l[d].blockerLog.slice(-5).some(b=>b.direction===dir&&Date.now()-b.recordedAt<10*60*1000)) return;
+  const active=[mom,lvl,flow].filter(s=>s.active&&s.direction===dir).map(s=>s===mom?'Momentum':s===lvl?'Level Reaction':'Flow Conviction');
+  const absent=['Momentum','Level Reaction','Flow Conviction'].filter(n=>!active.includes(n));
+  l[d].blockerLog.push({recordedAt:Date.now(),time:new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}),direction:dir,score:best,presentRules:active,absentRules:absent});
   saveLog(l);
 }
 function logOutcome(){
@@ -1550,7 +1429,7 @@ function renderSummary(){
 function buildExec(date,fires,blocks,wins,losses,scratches,open,wr,pnl,fps,bls){
   const L='─'.repeat(62),now=new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}),ln=[];
   ln.push('SPY EDGE  ★ APEX EVENING SUMMARY');
-  ln.push(`${date}  ·  Generated ${now}  ·  v1.6`);
+  ln.push(`${date}  ·  Generated ${now}  ·  v1.7`);
   ln.push(L);
   ln.push('\nDATA SOURCES');
   ln.push(`  Price   : ${CON.poly?'Polygon Paid — 5s real-time':'Demo / mock'}`);
@@ -1589,7 +1468,7 @@ function buildExec(date,fires,blocks,wins,losses,scratches,open,wr,pnl,fps,bls){
   else if(wr!==null) ln.push(`  📊 Win rate ${wr}% acceptable. Continue logging to build sample size.`);
   else ln.push('  📊 Log trade outcomes after close to enable analysis.');
   ln.push(`\n${L}`);
-  ln.push('SPY Edge v1.6  ·  Not financial advice  ·  Model refinement tool only');
+  ln.push('SPY Edge v1.7  ·  Not financial advice  ·  Model refinement tool only');
   return ln.join('\n');
 }
 
@@ -1605,11 +1484,22 @@ function openSettings(){
     <div style="border-top:1px solid #1e293b;padding-top:16px;margin-bottom:16px">
       <div class="sl" style="margin-bottom:10px">PUSH NOTIFICATION TEST</div>
       <div style="font-size:11px;color:#475569;margin-bottom:10px">Send a test notification to confirm Pushover is working.</div>
-      <button class="btn-ghost" onclick="sendSMS('SPY Edge v1.6 test — Pushover connected ✓').then(ok=>alert(ok?'Sent ✓':'Failed — check keys'))" style="padding:8px 16px;border-radius:6px;font-size:11px">SEND TEST NOTIFICATION</button>
+      <button class="btn-ghost" onclick="sendSMS('SPY Edge v1.7 test — Pushover connected ✓').then(ok=>alert(ok?'Sent ✓':'Failed — check keys'))" style="padding:8px 16px;border-radius:6px;font-size:11px">SEND TEST NOTIFICATION</button>
+    </div>
+    <div style="border-top:1px solid #1e293b;padding-top:16px;margin-bottom:16px">
+      <div class="sl" style="margin-bottom:10px">SIGNAL PARAMS</div>
+      <div style="font-size:11px;color:#475569;line-height:2.2">
+        APEX threshold: <b style="color:#f59e0b">${P.APEX_CONF}%</b> &nbsp;·&nbsp; Min signals: <b style="color:#f59e0b">${P.APEX_MIN_SIGS}</b><br>
+        Momentum: EMA touch $${P.MOM_EMA_TOUCH} · tgt $${P.MOM_EMA_TGT} · stop $${P.MOM_EMA_STOP}<br>
+        Level: GEX $${P.LVL_GEX_PROX} · HVN $${P.LVL_HVN_PROX} · DP $${P.LVL_DP_PROX}<br>
+        Flow: min $${(P.FLOW_SWEEP_MIN/1000).toFixed(0)}K · sweeps ${P.FLOW_SWEEP_COUNT} · ratio ${P.FLOW_MOM_THRESH*100}%<br>
+        Boosters: GEX +${P.BOOST_GEX_REGIME} · Confluence +${P.BOOST_CONFLUENCE} · Flow accel +${P.BOOST_FLOW_ACCEL}<br>
+        Weights: Momentum ${P.APEX_W_MOM}% · Level ${P.APEX_W_LVL}% · Flow ${P.APEX_W_FLOW}%
+      </div>
     </div>
     <div style="border-top:1px solid #1e293b;padding-top:16px">
       <div class="sl" style="margin-bottom:10px">REFRESH RATES</div>
-      <div style="font-size:11px;color:#475569;line-height:2">Price (Polygon paid): every ${P.LIVE_MS/1000}s in LIVE mode<br>Flow (Unusual Whales): every ${P.FLOW_MS/1000}s<br>GEX (Unusual Whales): every ${P.GEX_INTERVAL_MIN} minutes<br>Edit PARAMS block in the file to adjust.</div>
+      <div style="font-size:11px;color:#475569;line-height:2">Price: every ${P.LIVE_MS/1000}s · Flow: every ${P.FLOW_MS/1000}s · GEX: auto on each flow refresh</div>
     </div>`;
 }
 function closeSettings(){document.getElementById('settings-modal').style.display='none';}
